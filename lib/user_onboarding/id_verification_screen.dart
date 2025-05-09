@@ -203,12 +203,8 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
                               ),
                               child: ElevatedButton(
                                 onPressed: () {
-                                  // Navigate to account created success screen
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => AccountSuccessScreen(),
-                                    ),
-                                  );
+                                  // Navigate to account created success screen with replacement
+                                  Navigator.of(context).pushReplacementNamed('/account_success');
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Color(0xFF5F67EE),

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'screens/profile_screen.dart';
-import 'screens/wallet_screen.dart';
-import 'screens/winner_screen.dart';
-import 'screens/home_screen.dart';
+import 'profile_screen.dart';
+import 'wallet_screen.dart';
+import 'winner_screen.dart';
+import 'home_screen.dart';
 import 'dart:math';
 
 class MainScreen extends StatefulWidget {

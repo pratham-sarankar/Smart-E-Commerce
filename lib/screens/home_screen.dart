@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:smart_eommerce/screens/settings_screen.dart';
+import 'package:smart_eommerce/widgets/game_card.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:smart_eommerce/services/user_service.dart';
+import 'package:smart_eommerce/models/user_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -11,11 +15,30 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   bool _showBalance = true;
   late TabController _tabController;
+  String _userName = 'User';
+  final UserService _userService = UserService();
+  UserModel? _userProfile;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final result = await _userService.getUserProfile();
+      
+      if (result['success']) {
+        setState(() {
+          _userProfile = result['user'];
+          _userName = _userProfile?.fullname ?? 'User';
+        });
+      }
+    } catch (e) {
+      print('Error loading user profile: $e');
+    }
   }
 
   @override
@@ -127,8 +150,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             backgroundImage: AssetImage('assets/images/profile_pic.png'),
                           ),
                           const SizedBox(width: 12),
-                          const Text(
-                            'Morning Rajat,',
+                          Text(
+                            _getGreeting(),
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 18,
@@ -214,6 +237,40 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           ),
                         ),
                       ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Play Game Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.games),
+                          label: const Text("PLAY GAME"),
+                          onPressed: () {
+                            // Show game card popup
+                            GameCardDialog.show(
+                              context,
+                              onPlay: () {
+                                // Handle game start logic
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Game started!')),
+                                );
+                              },
+                              title: 'Money Bag Challenge',
+                              description: 'Complete tasks and earn real money!',
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber,
+                            foregroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                      
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -586,6 +643,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ],
       ),
     );
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    String greeting;
+    
+    if (hour < 12) {
+      greeting = 'Good Morning';
+    } else if (hour < 17) {
+      greeting = 'Good Afternoon';
+    } else {
+      greeting = 'Good Evening';
+    }
+    
+    return '$greeting, $_userName';
   }
 }
 

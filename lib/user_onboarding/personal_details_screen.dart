@@ -448,12 +448,8 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                                 child: ElevatedButton(
                                   onPressed: () {
                                     if (_formKey.currentState!.validate()) {
-                                      // Navigate to ID Verification screen
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) => IdVerificationScreen(),
-                                        ),
-                                      );
+                                      // Navigate to ID Verification screen with replacement
+                                      Navigator.of(context).pushReplacementNamed('/id_verification');
                                     }
                                   },
                                   style: ElevatedButton.styleFrom(
