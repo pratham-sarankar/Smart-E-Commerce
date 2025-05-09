@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_eommerce/screens/settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -84,7 +85,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 color: Colors.white,
                 size: 20,
               ),
-              onPressed: () {},
+              onPressed: () {
+                   Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => SettingsScreen()),
+                              );
+              },
             ),
           ),
         ],
@@ -324,7 +330,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             ),
                           ),
                           OutlinedButton.icon(
-                            onPressed: () {},
+                            onPressed: () {
+                           
+                            },
                             icon: Icon(
                               Icons.settings,
                               color: Colors.white,
