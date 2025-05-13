@@ -108,6 +108,29 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
   }
 
+  Future<void> _saveUserData(Map<String, dynamic> loginData) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Save token
+      await prefs.setString('auth_token', loginData['token']);
+      
+      // Save user data
+      if (loginData['user'] != null) {
+        await prefs.setString('user_id', loginData['user']['id']);
+        await prefs.setString('user_email', loginData['user']['email']);
+      }
+      
+      // Set login status
+      await prefs.setBool('is_logged_in', true);
+      
+      print('User data saved successfully');
+    } catch (e) {
+      print('Error saving user data: $e');
+      throw e;
+    }
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -140,6 +163,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         });
 
         if (result['success'] == true) {
+          print('Login successful, saving user data');
+          // Save user data and token
+          await _saveUserData(result);
+          
           print('Login successful, navigating to main screen');
           // Navigate to Main Screen on successful login
           Navigator.pushReplacementNamed(context, '/main');

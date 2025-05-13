@@ -1,6 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
-class AccountSuccessScreen extends StatelessWidget {
+class AccountSuccessScreen extends StatefulWidget {
+  @override
+  _AccountSuccessScreenState createState() => _AccountSuccessScreenState();
+}
+
+class _AccountSuccessScreenState extends State<AccountSuccessScreen> {
+  String _userName = '';
+  String _phoneNumber = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString('user');
+      
+      if (userJson != null) {
+        final userData = jsonDecode(userJson);
+        setState(() {
+          _userName = userData['fullname'] ?? '';
+          _phoneNumber = userData['phone'] ?? '';
+        });
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -12,6 +45,7 @@ class AccountSuccessScreen extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [Color(0xFF19173A), Color(0xFF363079)],
+            stops: [0.2, 0.8],
           ),
         ),
         child: SafeArea(
@@ -77,8 +111,12 @@ class AccountSuccessScreen extends StatelessWidget {
                         bottom: 40,
                         right: 32,
                         child: ElevatedButton(
-                          onPressed: () {
-                            // Navigate to main screen
+                          onPressed: () async {
+                            // Mark onboarding as complete
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setBool('onboarding_complete', true);
+                            
+                            // Navigate to main app
                             Navigator.of(context).pushReplacementNamed('/main');
                           },
                           style: ElevatedButton.styleFrom(
@@ -129,7 +167,7 @@ class AccountSuccessScreen extends StatelessWidget {
                             
                             // Name
                             Text(
-                              'Rajat',
+                              _userName,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.black,
@@ -140,7 +178,7 @@ class AccountSuccessScreen extends StatelessWidget {
                             
                             // Phone number
                             Text(
-                              '236-897 548963256',
+                              _phoneNumber,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.black54,

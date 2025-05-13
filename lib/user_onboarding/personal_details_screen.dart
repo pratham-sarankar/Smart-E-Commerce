@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'id_verification_screen.dart';
 
 class PersonalDetailsScreen extends StatefulWidget {
@@ -17,6 +19,49 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
   final TextEditingController _monthController = TextEditingController();
   final TextEditingController _yearController = TextEditingController();
   
+  bool _isLoading = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString('user');
+      
+      if (userJson != null) {
+        final userData = jsonDecode(userJson);
+        setState(() {
+          _emailController.text = userData['email'] ?? '';
+          
+          // Split fullname into first and last name
+          if (userData['fullname'] != null) {
+            final nameParts = userData['fullname'].split(' ');
+            _firstNameController.text = nameParts.first;
+            if (nameParts.length > 1) {
+              _lastNameController.text = nameParts.sublist(1).join(' ');
+            }
+          }
+          
+          // Split DOB into day, month, year
+          if (userData['dob'] != null) {
+            final dobParts = userData['dob'].split('-');
+            if (dobParts.length == 3) {
+              _dayController.text = dobParts[0];
+              _monthController.text = dobParts[1];
+              _yearController.text = dobParts[2];
+            }
+          }
+        });
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+    }
+  }
+  
   @override
   void dispose() {
     _firstNameController.dispose();
@@ -28,17 +73,43 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
     super.dispose();
   }
 
-  // Default values for form inputs
-  @override
-  void initState() {
-    super.initState();
-    // Set default values
-    _firstNameController.text = "Rajat";
-    _lastNameController.text = "Pradhan";
-    _emailController.text = "rajat.pradhan@gmail.com";
-    _dayController.text = "06";
-    _monthController.text = "05";
-    _yearController.text = "2001";
+  Future<void> _saveUserData() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final userJson = prefs.getString('user');
+        
+        if (userJson != null) {
+          final userData = jsonDecode(userJson);
+          
+          // Update user data
+          userData['fullname'] = '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}';
+          userData['dob'] = '${_dayController.text}-${_monthController.text}-${_yearController.text}';
+          
+          // Save updated user data
+          await prefs.setString('user', jsonEncode(userData));
+          
+          // Navigate to ID verification screen
+          Navigator.of(context).pushReplacementNamed('/id_verification');
+        }
+      } catch (e) {
+        print('Error saving user data: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving data: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
   
   @override
@@ -103,364 +174,195 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                   physics: BouncingScrollPhysics(),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Title
-                        const Text(
-                          'Personal Details',
-                          style: TextStyle(
-                            color: Color(0xFF19173A),
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Title
+                          const Text(
+                            'Personal Details',
+                            style: TextStyle(
+                              color: Color(0xFF19173A),
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Please provide your personal information to complete your profile',
-                          style: TextStyle(
-                            color: Colors.black54,
-                            fontSize: 13,
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Please provide your personal information to complete your profile',
+                            style: TextStyle(
+                              color: Colors.black54,
+                              fontSize: 13,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        
-                        // Form fields
-                        Form(
-                          key: _formKey,
-                          child: Column(
+                          const SizedBox(height: 20),
+                          
+                          // Form fields
+                          buildTextField(
+                            controller: _firstNameController,
+                            label: 'First Name',
+                            hintText: 'Enter your first name',
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your first name';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          
+                          buildTextField(
+                            controller: _lastNameController,
+                            label: 'Last Name',
+                            hintText: 'Enter your last name',
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your last name';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          
+                          buildTextField(
+                            controller: _emailController,
+                            label: 'Email Address',
+                            hintText: 'Enter your email address',
+                            keyboardType: TextInputType.emailAddress,
+                            readOnly: true,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your email';
+                              }
+                              if (!value.contains('@') || !value.contains('.')) {
+                                return 'Please enter a valid email';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 18),
+                          
+                          // Birthday section
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // First Name
-                              buildTextField(
-                                controller: _firstNameController,
-                                label: 'First Name',
-                                hintText: 'Enter your first name',
-                                helperText: 'Helper text for status and guidance',
-                                icon: Icons.person_outline,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter your first name';
-                                  }
-                                  return null;
-                                },
+                              Text(
+                                'Birthday',
+                                style: TextStyle(
+                                  color: Color(0xFF19173A),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 8),
                               
-                              // Last Name
-                              buildTextField(
-                                controller: _lastNameController,
-                                label: 'Last Name',
-                                hintText: 'Enter your last name',
-                                helperText: 'Helper text for status and guidance',
-                                icon: Icons.person_outline,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter your last name';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 12),
-                              
-                              // Email
-                              buildTextField(
-                                controller: _emailController,
-                                label: 'Email Address',
-                                hintText: 'Enter your email address',
-                                helperText: 'Helper text for status and guidance',
-                                icon: Icons.email_outlined,
-                                keyboardType: TextInputType.emailAddress,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter your email';
-                                  }
-                                  // Basic email validation
-                                  if (!value.contains('@') || !value.contains('.')) {
-                                    return 'Please enter a valid email';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 18),
-                              
-                              // Birthday section
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              // Day, Month, Year fields
+                              Row(
                                 children: [
-                                  Text(
-                                    'Birthday',
-                                    style: TextStyle(
-                                      color: Color(0xFF19173A),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
+                                  // Day
+                                  Expanded(
+                                    child: buildDateField(
+                                      controller: _dayController,
+                                      label: 'Day',
+                                      hint: 'DD',
+                                      maxLength: 2,
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Required';
+                                        }
+                                        int? day = int.tryParse(value);
+                                        if (day == null || day < 1 || day > 31) {
+                                          return 'Invalid';
+                                        }
+                                        return null;
+                                      },
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(width: 10),
                                   
-                                  // Day, Month, Year fields
-                                  Row(
-                                    children: [
-                                      // Day
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Day',
-                                              style: TextStyle(
-                                                color: Color(0xFF19173A),
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                borderRadius: BorderRadius.circular(12),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black.withOpacity(0.05),
-                                                    blurRadius: 5,
-                                                    spreadRadius: 1,
-                                                    offset: Offset(0, 2),
-                                                  ),
-                                                ],
-                                              ),
-                                              child: TextFormField(
-                                                controller: _dayController,
-                                                keyboardType: TextInputType.number,
-                                                maxLength: 2,
-                                                style: TextStyle(fontSize: 15),
-                                                validator: (value) {
-                                                  if (value == null || value.isEmpty) {
-                                                    return 'Required';
-                                                  }
-                                                  int? day = int.tryParse(value);
-                                                  if (day == null || day < 1 || day > 31) {
-                                                    return 'Invalid';
-                                                  }
-                                                  return null;
-                                                },
-                                                decoration: InputDecoration(
-                                                  hintText: 'DD',
-                                                  counterText: '',
-                                                  filled: true,
-                                                  fillColor: Colors.white,
-                                                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                                                  border: OutlineInputBorder(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
-                                                  ),
-                                                  enabledBorder: OutlineInputBorder(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
-                                                  ),
-                                                  focusedBorder: OutlineInputBorder(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    borderSide: BorderSide(color: Color(0xFF5F67EE), width: 1.0),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              'Helper text for status and guidance',
-                                              style: TextStyle(
-                                                color: Colors.black54,
-                                                fontSize: 9,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      
-                                      // Month
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Month',
-                                              style: TextStyle(
-                                                color: Color(0xFF19173A),
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                borderRadius: BorderRadius.circular(12),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black.withOpacity(0.05),
-                                                    blurRadius: 5,
-                                                    spreadRadius: 1,
-                                                    offset: Offset(0, 2),
-                                                  ),
-                                                ],
-                                              ),
-                                              child: TextFormField(
-                                                controller: _monthController,
-                                                keyboardType: TextInputType.number,
-                                                maxLength: 2,
-                                                style: TextStyle(fontSize: 15),
-                                                validator: (value) {
-                                                  if (value == null || value.isEmpty) {
-                                                    return 'Required';
-                                                  }
-                                                  int? month = int.tryParse(value);
-                                                  if (month == null || month < 1 || month > 12) {
-                                                    return 'Invalid';
-                                                  }
-                                                  return null;
-                                                },
-                                                decoration: InputDecoration(
-                                                  hintText: 'MM',
-                                                  counterText: '',
-                                                  filled: true,
-                                                  fillColor: Colors.white,
-                                                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                                                  border: OutlineInputBorder(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
-                                                  ),
-                                                  enabledBorder: OutlineInputBorder(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
-                                                  ),
-                                                  focusedBorder: OutlineInputBorder(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    borderSide: BorderSide(color: Color(0xFF5F67EE), width: 1.0),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              'Helper text for status and guidance',
-                                              style: TextStyle(
-                                                color: Colors.black54,
-                                                fontSize: 9,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      
-                                      // Year
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Year',
-                                              style: TextStyle(
-                                                color: Color(0xFF19173A),
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                borderRadius: BorderRadius.circular(12),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black.withOpacity(0.05),
-                                                    blurRadius: 5,
-                                                    spreadRadius: 1,
-                                                    offset: Offset(0, 2),
-                                                  ),
-                                                ],
-                                              ),
-                                              child: TextFormField(
-                                                controller: _yearController,
-                                                keyboardType: TextInputType.number,
-                                                maxLength: 4,
-                                                style: TextStyle(fontSize: 15),
-                                                validator: (value) {
-                                                  if (value == null || value.isEmpty) {
-                                                    return 'Required';
-                                                  }
-                                                  int? year = int.tryParse(value);
-                                                  if (year == null || year < 1900 || year > DateTime.now().year) {
-                                                    return 'Invalid';
-                                                  }
-                                                  return null;
-                                                },
-                                                decoration: InputDecoration(
-                                                  hintText: 'YYYY',
-                                                  counterText: '',
-                                                  filled: true,
-                                                  fillColor: Colors.white,
-                                                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                                                  border: OutlineInputBorder(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
-                                                  ),
-                                                  enabledBorder: OutlineInputBorder(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
-                                                  ),
-                                                  focusedBorder: OutlineInputBorder(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    borderSide: BorderSide(color: Color(0xFF5F67EE), width: 1.0),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              'Helper text for status and guidance',
-                                              style: TextStyle(
-                                                color: Colors.black54,
-                                                fontSize: 9,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
+                                  // Month
+                                  Expanded(
+                                    child: buildDateField(
+                                      controller: _monthController,
+                                      label: 'Month',
+                                      hint: 'MM',
+                                      maxLength: 2,
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Required';
+                                        }
+                                        int? month = int.tryParse(value);
+                                        if (month == null || month < 1 || month > 12) {
+                                          return 'Invalid';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  
+                                  // Year
+                                  Expanded(
+                                    child: buildDateField(
+                                      controller: _yearController,
+                                      label: 'Year',
+                                      hint: 'YYYY',
+                                      maxLength: 4,
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Required';
+                                        }
+                                        int? year = int.tryParse(value);
+                                        if (year == null || year < 1900 || year > DateTime.now().year) {
+                                          return 'Invalid';
+                                        }
+                                        return null;
+                                      },
+                                    ),
                                   ),
                                 ],
                               ),
-                              
-                              const SizedBox(height: 25),
-                              
-                              // Continue button
-                              Container(
-                                width: double.infinity,
-                                height: 52,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Color(0xFF5F67EE).withOpacity(0.3),
-                                      blurRadius: 8,
-                                      spreadRadius: 0,
-                                      offset: Offset(0, 4),
-                                    ),
-                                  ],
+                            ],
+                          ),
+                          
+                          const SizedBox(height: 25),
+                          
+                          // Continue button
+                          Container(
+                            width: double.infinity,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color(0xFF5F67EE).withOpacity(0.3),
+                                  blurRadius: 8,
+                                  spreadRadius: 0,
+                                  offset: Offset(0, 4),
                                 ),
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    if (_formKey.currentState!.validate()) {
-                                      // Navigate to ID Verification screen with replacement
-                                      Navigator.of(context).pushReplacementNamed('/id_verification');
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Color(0xFF5F67EE),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                              ],
+                            ),
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _saveUserData,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xFF5F67EE),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                elevation: 0,
+                              ),
+                              child: _isLoading
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.5,
                                     ),
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                    elevation: 0,
-                                  ),
-                                  child: const Text(
+                                  )
+                                : const Text(
                                     'Continue',
                                     style: TextStyle(
                                       color: Colors.white,
@@ -468,12 +370,10 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -523,13 +423,8 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
     required TextEditingController controller,
     required String label,
     required String hintText,
-    required IconData icon,
-    String? helperText,
     TextInputType keyboardType = TextInputType.text,
-    bool obscureText = false,
     bool readOnly = false,
-    int maxLines = 1,
-    VoidCallback? onTap,
     String? Function(String?)? validator,
   }) {
     return Column(
@@ -559,16 +454,12 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
           child: TextFormField(
             controller: controller,
             keyboardType: keyboardType,
-            obscureText: obscureText,
             readOnly: readOnly,
-            maxLines: maxLines,
-            onTap: onTap,
             validator: validator,
             style: TextStyle(fontSize: 15),
             decoration: InputDecoration(
               hintText: hintText,
               hintStyle: TextStyle(fontSize: 14, color: Colors.black38),
-              prefixIcon: Icon(icon, color: Color(0xFF5F67EE), size: 22),
               filled: true,
               fillColor: Colors.white,
               contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
@@ -588,24 +479,71 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.red, width: 1.0),
               ),
-              focusedErrorBorder: OutlineInputBorder(
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget buildDateField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required int maxLength,
+    required String? Function(String?)? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Color(0xFF19173A),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 5,
+                spreadRadius: 1,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            maxLength: maxLength,
+            style: TextStyle(fontSize: 15),
+            validator: validator,
+            decoration: InputDecoration(
+              hintText: hint,
+              counterText: '',
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.red, width: 1.5),
+                borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Color(0xFF5F67EE), width: 1.0),
               ),
             ),
           ),
         ),
-        if (helperText != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 2, left: 2),
-            child: Text(
-              helperText,
-              style: TextStyle(
-                color: Colors.black54,
-                fontSize: 9,
-              ),
-            ),
-          ),
       ],
     );
   }

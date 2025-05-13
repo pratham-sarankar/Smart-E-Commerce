@@ -1,69 +1,69 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_eommerce/services/auth_service.dart';
-import 'package:smart_eommerce/auth/reset_password_screen.dart';
 
-class OtpScreen extends StatefulWidget {
+class ResetPasswordScreen extends StatefulWidget {
   final String email;
-  final bool isForgotPassword;
+  final String otp;
 
-  const OtpScreen({
+  const ResetPasswordScreen({
     Key? key,
     required this.email,
-    this.isForgotPassword = false,
+    required this.otp,
   }) : super(key: key);
 
   @override
-  _OtpScreenState createState() => _OtpScreenState();
+  _ResetPasswordScreenState createState() => _ResetPasswordScreenState();
 }
 
-class _OtpScreenState extends State<OtpScreen> {
-  final _otpController = TextEditingController();
+class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   final AuthService _authService = AuthService();
 
-  Future<void> _verifyOtp() async {
+  Future<void> _resetPassword() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
       try {
-        final result = widget.isForgotPassword
-            ? await _authService.verifyForgotPasswordOtp(
-                widget.email,
-                _otpController.text,
-              )
-            : await _authService.verifyOtp(
-                widget.email,
-                _otpController.text,
-              );
+        final result = await _authService.resetPassword(
+          widget.email,
+          widget.otp,
+          _passwordController.text,
+        );
 
         setState(() {
           _isLoading = false;
         });
 
         if (result['success'] == true) {
-          if (widget.isForgotPassword) {
-            // Navigate to reset password screen
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ResetPasswordScreen(
-                  email: widget.email,
-                  otp: _otpController.text,
-                ),
-              ),
-            );
-          } else {
-            // Navigate to main screen for login
-            Navigator.pushReplacementNamed(context, '/main');
-          }
+          // Show success message and navigate to login
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Password reset successful. Please login with your new password.'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          );
+
+          // Navigate back to login screen
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/login',
+            (route) => false,
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message'] ?? 'Invalid OTP'),
+              content: Text(result['message'] ?? 'Failed to reset password'),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
               margin: EdgeInsets.all(16),
@@ -91,7 +91,8 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   void dispose() {
-    _otpController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -127,7 +128,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     const SizedBox(height: 20),
                     // Title
                     const Text(
-                      'OTP Verification',
+                      'Reset Password',
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -135,17 +136,15 @@ class _OtpScreenState extends State<OtpScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      widget.isForgotPassword
-                          ? 'Enter the OTP sent to your email to reset your password'
-                          : 'Enter the OTP sent to your email',
+                    const Text(
+                      'Enter your new password',
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.white70,
                       ),
                     ),
                     const SizedBox(height: 40),
-                    // OTP form
+                    // Password form
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -165,25 +164,83 @@ class _OtpScreenState extends State<OtpScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              // OTP field
+                              // New password field
                               TextFormField(
-                                controller: _otpController,
+                                controller: _passwordController,
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
-                                    return 'Please enter the OTP';
+                                    return 'Please enter a password';
                                   }
-                                  if (value.length != 6) {
-                                    return 'OTP must be 6 digits';
+                                  if (value.length < 6) {
+                                    return 'Password must be at least 6 characters';
                                   }
                                   return null;
                                 },
                                 style: const TextStyle(fontSize: 16),
-                                keyboardType: TextInputType.number,
-                                maxLength: 6,
+                                obscureText: _obscurePassword,
                                 decoration: InputDecoration(
-                                  hintText: 'Enter OTP',
-                                  counterText: '',
+                                  hintText: 'New Password',
                                   prefixIcon: Icon(Icons.lock_outline, color: Color(0xFF5F67EE)),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                      color: Colors.grey,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: Color(0xFF5F67EE), width: 2),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: Colors.red, width: 2),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // Confirm password field
+                              TextFormField(
+                                controller: _confirmPasswordController,
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please confirm your password';
+                                  }
+                                  if (value != _passwordController.text) {
+                                    return 'Passwords do not match';
+                                  }
+                                  return null;
+                                },
+                                style: const TextStyle(fontSize: 16),
+                                obscureText: _obscureConfirmPassword,
+                                decoration: InputDecoration(
+                                  hintText: 'Confirm Password',
+                                  prefixIcon: Icon(Icons.lock_outline, color: Color(0xFF5F67EE)),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                      color: Colors.grey,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureConfirmPassword = !_obscureConfirmPassword;
+                                      });
+                                    },
+                                  ),
                                   filled: true,
                                   fillColor: Colors.white,
                                   border: OutlineInputBorder(
@@ -205,7 +262,7 @@ class _OtpScreenState extends State<OtpScreen> {
                                 ),
                               ),
                               const SizedBox(height: 24),
-                              // Verify button
+                              // Reset password button
                               Container(
                                 height: 52,
                                 decoration: BoxDecoration(
@@ -226,7 +283,7 @@ class _OtpScreenState extends State<OtpScreen> {
                                         ),
                                       )
                                     : ElevatedButton(
-                                        onPressed: _verifyOtp,
+                                        onPressed: _resetPassword,
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Color(0xFF5F67EE),
                                           shape: RoundedRectangleBorder(
@@ -235,7 +292,7 @@ class _OtpScreenState extends State<OtpScreen> {
                                           elevation: 0,
                                         ),
                                         child: const Text(
-                                          'Verify OTP',
+                                          'Reset Password',
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 16,
@@ -258,4 +315,4 @@ class _OtpScreenState extends State<OtpScreen> {
       ),
     );
   }
-}
+} 

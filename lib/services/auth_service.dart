@@ -218,6 +218,14 @@ class AuthService {
         final data = jsonDecode(response.body);
         print('Register API response parsed: $data'); 
         
+        // Print token separately for better visibility
+        if (data['token'] != null) {
+          print('\n=== Registration Token ===');
+          print('Full Token: ${data['token']}');
+          print('Token Length: ${data['token'].length}');
+          print('=======================\n');
+        }
+        
         // Check if registration was successful
         if (response.statusCode == 201 || response.statusCode == 200) {
           print('Registration successful');
@@ -273,6 +281,76 @@ class AuthService {
       return {
         'success': false,
         'message': 'An error occurred. Please check your connection and try again.',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyOtp(String email, String otp) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/user/verify-otp'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'email': email,
+          'otp': otp,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      return data;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error: ${e.toString()}',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyForgotPasswordOtp(String email, String otp) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/user/verify-otp'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'email': email,
+          'otp': otp,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      return data;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error: ${e.toString()}',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> resetPassword(String email, String otp, String newPassword) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/user/reset-password'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'email': email,
+          'otp': otp,
+          'newPassword': newPassword,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      return data;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error: ${e.toString()}',
       };
     }
   }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'package:smart_eommerce/services/document_service.dart';
 import 'account_success_screen.dart';
 
 class IdVerificationScreen extends StatefulWidget {
@@ -10,8 +12,33 @@ class IdVerificationScreen extends StatefulWidget {
 }
 
 class _IdVerificationScreenState extends State<IdVerificationScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final DocumentService _documentService = DocumentService();
+  
+  // Document images
   File? _idImage;
+  File? _bankPassbookImage;
   bool _isIdCaptured = false;
+  bool _isPassbookCaptured = false;
+  
+  // Bank details controllers
+  final _bankAccountController = TextEditingController();
+  final _ifscCodeController = TextEditingController();
+  final _kycDocumentNumberController = TextEditingController();
+  final _bankNameController = TextEditingController();
+  final _branchNameController = TextEditingController();
+  
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _bankAccountController.dispose();
+    _ifscCodeController.dispose();
+    _kycDocumentNumberController.dispose();
+    _bankNameController.dispose();
+    _branchNameController.dispose();
+    super.dispose();
+  }
 
   Future<void> _takeIdPhoto() async {
     try {
@@ -42,6 +69,104 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  Future<void> _takePassbookPhoto() async {
+    try {
+      final XFile? photo = await ImagePicker().pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.rear,
+        imageQuality: 85,
+      );
+      
+      if (photo != null) {
+        setState(() {
+          _bankPassbookImage = File(photo.path);
+          _isPassbookCaptured = true;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Passbook photo captured successfully'),
+            backgroundColor: Color(0xFF5F67EE),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error accessing camera: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<String> _getBase64Image(File imageFile) async {
+    final bytes = await imageFile.readAsBytes();
+    return base64Encode(bytes);
+  }
+
+  Future<void> _uploadDocuments() async {
+    if (_formKey.currentState!.validate()) {
+      if (!_isIdCaptured || !_isPassbookCaptured) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please capture both ID and Passbook photos'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Convert images to base64
+        final idImageBase64 = await _getBase64Image(_idImage!);
+        final passbookImageBase64 = await _getBase64Image(_bankPassbookImage!);
+
+        final result = await _documentService.uploadDocuments(
+          bankAccountNumber: _bankAccountController.text.trim(),
+          ifscCode: _ifscCodeController.text.trim(),
+          kycDocumentNumber: _kycDocumentNumberController.text.trim(),
+          kycDocumentImage: idImageBase64,
+          bankName: _bankNameController.text.trim(),
+          branchName: _branchNameController.text.trim(),
+          bankPassbookImage: passbookImageBase64,
+        );
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        if (result['success']) {
+          // Navigate to account success screen
+          Navigator.of(context).pushReplacementNamed('/account_success');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message']),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error uploading documents: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -103,131 +228,173 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
                 ),
                 
                 // Main content
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(30, 40, 20, 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ID Image first
-                      Center(
-                        child: Container(
-                          width: MediaQuery.of(context).size.width * 0.65,
-                          height: MediaQuery.of(context).size.height * 0.22,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
+                SingleChildScrollView(
+                  physics: BouncingScrollPhysics(),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(30, 40, 20, 20),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Title
+                          const Text(
+                            'ID Verification',
+                            style: TextStyle(
+                              color: Color(0xFF19173A),
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                          clipBehavior: Clip.hardEdge,
-                          child: _isIdCaptured && _idImage != null
-                              ? Image.file(
-                                  _idImage!,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  fit: BoxFit.cover,
-                                )
-                              : Image.asset(
-                                  'assets/images/id.png',
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  fit: BoxFit.cover,
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Please provide your bank details and upload required documents',
+                            style: TextStyle(
+                              color: Colors.black54,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          // Bank Account Number
+                          buildTextField(
+                            controller: _bankAccountController,
+                            label: 'Bank Account Number',
+                            hintText: 'Enter your bank account number',
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your bank account number';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // IFSC Code
+                          buildTextField(
+                            controller: _ifscCodeController,
+                            label: 'IFSC Code',
+                            hintText: 'Enter your bank IFSC code',
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your IFSC code';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // KYC Document Number
+                          buildTextField(
+                            controller: _kycDocumentNumberController,
+                            label: 'KYC Document Number',
+                            hintText: 'Enter your KYC document number',
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your KYC document number';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // Bank Name
+                          buildTextField(
+                            controller: _bankNameController,
+                            label: 'Bank Name',
+                            hintText: 'Enter your bank name',
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your bank name';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // Branch Name
+                          buildTextField(
+                            controller: _branchNameController,
+                            label: 'Branch Name',
+                            hintText: 'Enter your branch name',
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your branch name';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          
+                          // ID Image Section
+                          buildImageSection(
+                            title: 'ID Document',
+                            subtitle: 'Upload your government issued ID',
+                            image: _idImage,
+                            isCaptured: _isIdCaptured,
+                            onCapture: _takeIdPhoto,
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // Bank Passbook Section
+                          buildImageSection(
+                            title: 'Bank Passbook',
+                            subtitle: 'Upload your bank passbook first page',
+                            image: _bankPassbookImage,
+                            isCaptured: _isPassbookCaptured,
+                            onCapture: _takePassbookPhoto,
+                          ),
+                          
+                          const SizedBox(height: 32),
+                          
+                          // Submit Button
+                          Container(
+                            width: double.infinity,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color(0xFF5F67EE).withOpacity(0.3),
+                                  blurRadius: 8,
+                                  spreadRadius: 0,
+                                  offset: Offset(0, 4),
                                 ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      
-                      // Title
-                      const Text(
-                        'ID Verification',
-                        style: TextStyle(
-                          color: Color(0xFF19173A),
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Varius facilisis in duis volutpat. Viverra fermentum nibh consectetur purus.',
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      
-                      // Personal ID Section
-                      Expanded(
-                        child: Column(
-                          children: [
-                            buildVerificationOption(
-                              title: 'Personal ID',
-                              subtitle: 'National ID, passport, drivers license',
-                              buttonText: 'Take Photo',
-                              icon: Icons.credit_card_outlined,
-                              onTap: _takeIdPhoto,
+                              ],
                             ),
-                            
-                            const SizedBox(height: 16),
-                            
-                            // Liveness Detection Section
-                            buildVerificationOption(
-                              title: 'Liveness Detection',
-                              subtitle: "Do a 'face dance' to verify yourself",
-                              buttonText: 'Record Video',
-                              icon: Icons.face_outlined,
-                              onTap: () {
-                                // Handle record video
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Opening camera for liveness verification...'),
-                                    backgroundColor: Color(0xFF5F67EE),
-                                  ),
-                                );
-                              },
-                            ),
-                            
-                            const Spacer(),
-                            
-                            // Verify ID Button
-                            Container(
-                              width: double.infinity,
-                              height: 52,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Color(0xFF5F67EE).withOpacity(0.3),
-                                    blurRadius: 8,
-                                    spreadRadius: 0,
-                                    offset: Offset(0, 4),
-                                  ),
-                                ],
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _uploadDocuments,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xFF5F67EE),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                elevation: 0,
                               ),
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  // Navigate to account created success screen with replacement
-                                  Navigator.of(context).pushReplacementNamed('/account_success');
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(0xFF5F67EE),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                              child: _isLoading
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Submit Documents',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  elevation: 0,
-                                ),
-                                child: const Text(
-                                  'Verify ID',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
                 
@@ -272,12 +439,77 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
     );
   }
   
-  Widget buildVerificationOption({
+  Widget buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hintText,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Color(0xFF19173A),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 5,
+                spreadRadius: 1,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            keyboardType: keyboardType,
+            validator: validator,
+            style: TextStyle(fontSize: 15),
+            decoration: InputDecoration(
+              hintText: hintText,
+              hintStyle: TextStyle(fontSize: 14, color: Colors.black38),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Color(0xFF5F67EE), width: 1.0),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.red, width: 1.0),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget buildImageSection({
     required String title,
     required String subtitle,
-    required String buttonText,
-    required IconData icon,
-    required VoidCallback onTap,
+    required File? image,
+    required bool isCaptured,
+    required VoidCallback onCapture,
   }) {
     return Container(
       padding: EdgeInsets.all(16),
@@ -307,7 +539,7 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  icon,
+                  Icons.photo_camera_outlined,
                   color: Color(0xFF5F67EE),
                   size: 22,
                 ),
@@ -340,8 +572,21 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
             ],
           ),
           SizedBox(height: 16),
+          if (isCaptured && image != null)
+            Container(
+              width: double.infinity,
+              height: 200,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                image: DecorationImage(
+                  image: FileImage(image),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          SizedBox(height: 16),
           InkWell(
-            onTap: onTap,
+            onTap: onCapture,
             borderRadius: BorderRadius.circular(8),
             child: Container(
               width: double.infinity,
@@ -351,27 +596,24 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Center(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        buttonText.contains('Take') ? Icons.camera_alt_outlined : Icons.videocam_outlined,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isCaptured ? Icons.refresh : Icons.camera_alt_outlined,
+                      color: Color(0xFF5F67EE),
+                      size: 18,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      isCaptured ? 'Retake Photo' : 'Take Photo',
+                      style: TextStyle(
                         color: Color(0xFF5F67EE),
-                        size: 18,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
                       ),
-                      SizedBox(width: 8),
-                      Text(
-                        buttonText,
-                        style: TextStyle(
-                          color: Color(0xFF5F67EE),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),

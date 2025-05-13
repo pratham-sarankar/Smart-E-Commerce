@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:smart_eommerce/auth/login_screen.dart';
 import 'package:smart_eommerce/auth/splash_screen.dart';
 import 'package:smart_eommerce/user_onboarding/personal_details_screen.dart';
@@ -9,6 +10,13 @@ import 'package:smart_eommerce/auth/register_screen.dart';
 import 'package:smart_eommerce/auth/forgot_password_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+    ),
+  );
   runApp(const MyApp());
 }
 
