@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_eommerce/screens/main_screen.dart';
 
 class WinnerScreen extends StatefulWidget {
   const WinnerScreen({Key? key}) : super(key: key);
@@ -37,57 +38,52 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
           children: [
             // App bar section as Stack with line behind transparent app bar
             Container(
-              height: 70, // Reduced height from 70 to 56 (standard app bar height) 
+              height: 56, // Standard app bar height
               child: Stack(
                 children: [
-                  // App bar line as the base layer
                   Positioned.fill(
                     child: Image.asset(
                       'assets/images/appbar_line.png',
-                      fit: BoxFit.cover, // Changed from fill to cover for better scaling
+                      fit: BoxFit.cover,
                       width: double.infinity,
                     ),
                   ),
                   
-                  // Transparent app bar overlaying the line
                   Positioned(
                     top: 0,
                     left: 0,
                     right: 0,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 3.0), // Reduced vertical padding
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Back button with title next to it
                           Row(
                             children: [
-                              // Back button - with transparent background
                               GestureDetector(
                                 onTap: () {
-                                  Navigator.pop(context);
+                                  Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => MainScreen()), (route) => false);
                                 },
                                 child: Container(
-                                  width: 40, // Reduced from 50 to 40
-                                  height: 40, // Reduced from 50 to 40
+                                  width: 36,
+                                  height: 36,
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF5030E8).withOpacity(0.7),
-                                    borderRadius: BorderRadius.circular(30),
+                                    borderRadius: BorderRadius.circular(18),
                                   ),
                                   child: const Icon(
                                     Icons.arrow_back,
                                     color: Colors.white,
-                                    size: 20, // Added size parameter to reduce icon size
+                                    size: 18,
                                   ),
                                 ),
                               ),
-                              // Title - positioned next to back button
-                              const SizedBox(width: 15),
+                              const SizedBox(width: 12),
                               const Text(
                                 'Daily Winner',
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 20, // Reduced from 24 to 20
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -105,10 +101,9 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
               child: SingleChildScrollView(
                 child: Column(
                   children: [
-                    // Winners banner image at the top
                     Container(
                       width: double.infinity,
-                      height: 300,
+                      height: 280,
                       decoration: const BoxDecoration(
                         color: Color(0xFF1E1E1E),
                         image: DecorationImage(
@@ -118,41 +113,15 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                       ),
                     ),
                     
-                    // Main winner profile
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
                       child: Column(
                         children: [
-                          // Container(
-                          //   width: 120,
-                          //   height: 120,
-                          //   decoration: BoxDecoration(
-                          //     shape: BoxShape.circle,
-                          //     border: Border.all(
-                          //       color: const Color(0xFF5030E8),
-                          //       width: 3,
-                          //     ),
-                          //     image: const DecorationImage(
-                          //       image: AssetImage('assets/images/profile_pic.png'),
-                          //       fit: BoxFit.cover,
-                          //     ),
-                          //     boxShadow: [
-                          //       BoxShadow(
-                          //         color: const Color(0xFF5030E8).withOpacity(0.5),
-                          //         blurRadius: 20,
-                          //         spreadRadius: 5,
-                          //       ),
-                          //     ],
-                          //   ),
-                          // ),
-                          
-                          // const SizedBox(height: 16),
-                          
                           const Text(
                             'Today Winner',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 22,
+                              fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -162,59 +131,60 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                     
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 20),
                       color: const Color(0xFF5030E8),
                       child: const Text(
                         'Rajat Pradhan from Bhopal',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 20,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                     
-                    const Padding(
-                      padding: EdgeInsets.all(16.0),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
                       child: Text(
                         'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Orci, interdum elit gravida enim ac eu tellus.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey),
+                        style: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 16,
+                          height: 1.5,
+                        ),
                       ),
                     ),
                     
-                    // Past winner title with decorative elements
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
                       child: Column(
                         children: [
                           const Text(
                             'Past Winners',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 20,
+                              fontSize: 22,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+                          const SizedBox(height: 16),
                         ],
                       ),
                     ),
                     
-                    // Past winners list
                     _buildPastWinnerItem('assets/images/avatar.png', 'Rajat Pradhan', 'From Bhopal', '₹100000.00'),
                     _buildPastWinnerItem('assets/images/profile_pic.png', 'Rajat Pradhan', 'From Bhopal', '₹100000.00'),
                     _buildPastWinnerItem('assets/images/avatar.png', 'Rajat Pradhan', 'From Bhopal', '₹100000.00'),
                     
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                     
-                    // Action buttons in a row
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
                       child: Column(
                         children: [
-                          // Invite button
-                          Container(
+                          SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
                               onPressed: () {},
@@ -223,7 +193,7 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF5030E8),
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 15),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -231,10 +201,9 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                             ),
                           ),
                           
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 16),
                           
-                          // Donate button
-                          Container(
+                          SizedBox(
                             width: double.infinity,
                             child: OutlinedButton.icon(
                               onPressed: () {},
@@ -243,7 +212,7 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.white,
                                 side: const BorderSide(color: Color(0xFF5030E8)),
-                                padding: const EdgeInsets.symmetric(vertical: 15),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -265,18 +234,18 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
 
   Widget _buildPastWinnerItem(String imagePath, String name, String location, String amount) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withOpacity(0.5)),
+        border: Border.all(color: Colors.grey.withOpacity(0.3)),
       ),
       child: Row(
         children: [
           Container(
-            width: 50,
-            height: 50,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: const Color(0xFFD8C4F4),
@@ -287,29 +256,35 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
             ),
           ),
           const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                location,
-                style: TextStyle(
-                  color: Colors.grey[400],
-                  fontSize: 12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  location,
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 13,
+                  ),
                 ),
-              ),
-              Text(
-                name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: 4),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const Spacer(),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF5030E8).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Text(
               amount,
               style: const TextStyle(

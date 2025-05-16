@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smart_eommerce/models/user_model.dart';
+import 'package:smart_eommerce/screens/main_screen.dart';
 import 'package:smart_eommerce/services/user_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -136,14 +137,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         padding: const EdgeInsets.all(16.0),
                         child: Row(
                           children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                              child: IconButton(
-                                icon: const Icon(Icons.arrow_back, color: Color(0xFF5030E8)),
-                                onPressed: () => Navigator.pop(context),
+                            GestureDetector(
+                              onTap: () {
+                                print('Back button pressed');
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Back button pressed')),
+                                );
+                                try {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const MainScreen()),
+                                  );
+                                  print('Navigation to MainScreen successful');
+                                } catch (e) {
+                                  print('Error during navigation: $e');
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(25),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.arrow_back,
+                                  color: Color(0xFF5030E8),
+                                  size: 24,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 20),

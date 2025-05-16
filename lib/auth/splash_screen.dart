@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:smart_eommerce/auth/login_screen.dart';
 import 'package:smart_eommerce/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -124,79 +125,82 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF19173A), Color(0xFF363079)],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF19173A), Color(0xFF363079)],
+            ),
           ),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Logo animation from top
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 800),
-                curve: Curves.easeOutBack,
-                transform: Matrix4.translationValues(0, _logoPosition, 0),
-                child: AnimatedScale(
-                  scale: _logoScale,
-                  duration: const Duration(milliseconds: 600),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Logo animation from top
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 800),
                   curve: Curves.easeOutBack,
-                  child: Hero(
-                    tag: 'login_logo',
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: Image.network(
-                        'https://cdn.builder.io/api/v1/image/assets/TEMP/2b11c06bdf765b35249d2275cc985e97f0b5fa2a',
-                        width: 207,
-                        height: 227,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 30),
-              
-              // Text animation coming from bottom
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 800),
-                curve: Curves.easeOutBack,
-                transform: Matrix4.translationValues(0, _textPosition, 0),
-                child: AnimatedOpacity(
-                  opacity: _textOpacity,
-                  duration: const Duration(milliseconds: 600),
-                  curve: Curves.easeIn,
-                  child: Hero(
-                    tag: 'login_title',
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: Text(
-                        'MASTI LOTTIE',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          foreground: Paint()
-                            ..shader = LinearGradient(
-                              colors: <Color>[
-                                Color(0xFF7DE2FC),
-                                Color(0xFF6366F1),
-                              ],
-                            ).createShader(Rect.fromLTWH(0.0, 0.0, 200.0, 70.0)),
-                          letterSpacing: 2,
+                  transform: Matrix4.translationValues(0, _logoPosition, 0),
+                  child: AnimatedScale(
+                    scale: _logoScale,
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeOutBack,
+                    child: Hero(
+                      tag: 'login_logo',
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: Image.network(
+                          'https://cdn.builder.io/api/v1/image/assets/TEMP/2b11c06bdf765b35249d2275cc985e97f0b5fa2a',
+                          width: 207,
+                          height: 227,
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+                
+                const SizedBox(height: 30),
+                
+                // Text animation coming from bottom
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 800),
+                  curve: Curves.easeOutBack,
+                  transform: Matrix4.translationValues(0, _textPosition, 0),
+                  child: AnimatedOpacity(
+                    opacity: _textOpacity,
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeIn,
+                    child: Hero(
+                      tag: 'login_title',
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: Text(
+                          'MASTI LOTTIE',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            foreground: Paint()
+                              ..shader = LinearGradient(
+                                colors: <Color>[
+                                  Color(0xFF7DE2FC),
+                                  Color(0xFF6366F1),
+                                ],
+                              ).createShader(Rect.fromLTWH(0.0, 0.0, 200.0, 70.0)),
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

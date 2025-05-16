@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:smart_eommerce/screens/main_screen.dart';
 import '../services/wallet_service.dart';
 import 'package:intl/intl.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({Key? key}) : super(key: key);
@@ -11,10 +13,94 @@ class WalletScreen extends StatefulWidget {
 
 class _WalletScreenState extends State<WalletScreen> {
   final WalletService _walletService = WalletService();
+  Razorpay? _razorpay;
   bool _isLoading = false;
   double _balance = 0.0;
   final List<Map<String, dynamic>> _transactions = [];
   final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWalletData();
+  }
+
+  void _initializeRazorpay() {
+    _razorpay = Razorpay();
+    _razorpay!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay!.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay!.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
+
+  Future<void> _loadWalletData() async {
+    setState(() => _isLoading = true);
+    try {
+      final walletData = await _walletService.getMyWallet();
+      if (walletData['success'] == true) {
+        setState(() {
+          _balance = (walletData['wallet']['balance'] ?? 0).toDouble();
+          // Add transactions from the wallet data if available
+          if (walletData['wallet']['transactions'] != null) {
+            _transactions.clear();
+            _transactions.addAll(
+              (walletData['wallet']['transactions'] as List).map((t) => {
+                'amount': t['amount'] ?? 0.0,
+                'type': t['type'] ?? 'Deposit',
+                'created_at': t['createdAt'] ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
+              }).toList(),
+            );
+          }
+        });
+      }
+    } catch (e) {
+      if (e.toString().contains('Unauthorized') || 
+          e.toString().contains('Authentication token not found')) {
+        _handleAuthError(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading wallet: ${e.toString()}')),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _razorpay?.clear();
+    super.dispose();
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    try {
+      // Verify the payment with your backend
+      final verifyResponse = await _walletService.verifyWalletTopup(double.parse(response.paymentId!));
+      
+      // Reload wallet data to get updated balance and transactions
+      await _loadWalletData();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Payment successful!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error verifying payment: ${e.toString()}')),
+      );
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Payment failed: ${response.message}')),
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('External wallet selected: ${response.walletName}')),
+    );
+  }
 
   void _addTransaction(double amount, String type) {
     setState(() {
@@ -94,18 +180,29 @@ class _WalletScreenState extends State<WalletScreen> {
               setState(() => _isLoading = true);
 
               try {
-                // First initiate the topup
+                // First initiate the topup to get order details
                 final topupResponse = await _walletService.topupWallet(amount);
                 
-                // Then verify the topup
-                final verifyResponse = await _walletService.verifyWalletTopup(amount);
+                // Initialize Razorpay only when needed
+                _initializeRazorpay();
                 
-                // Add transaction to local list
-                _addTransaction(amount, 'Deposit');
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Deposit successful!')),
-                );
+                // Initialize Razorpay payment
+                var options = {
+                  'key': 'rzp_test_NMHJrIP0HgARfE',
+                  'amount': (amount * 100).toInt(), // Amount in smallest currency unit
+                  'name': 'Smart E-commerce',
+                  'description': 'Wallet Top-up',
+                  'order_id': topupResponse['id'],
+                  'prefill': {
+                    'contact': '',
+                    'email': '',
+                  },
+                  'external': {
+                    'wallets': ['paytm']
+                  }
+                };
+
+                _razorpay!.open(options);
               } catch (e) {
                 if (e.toString().contains('Unauthorized') || 
                     e.toString().contains('Authentication token not found')) {
@@ -168,8 +265,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                   // Back button - with transparent background
                                   GestureDetector(
                                     onTap: () {
-                                      // Navigate back if needed
-                                      // Usually not needed in bottom nav scenario
+                                      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => MainScreen()), (route) => false);
                                     },
                                     child: Container(
                                       width: 50,
