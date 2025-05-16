@@ -4,6 +4,7 @@ import 'package:smart_eommerce/auth/otp_screen.dart';
 import 'package:smart_eommerce/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/rendering.dart';
+import 'package:smart_eommerce/models/user_model.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -112,13 +113,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     try {
       final prefs = await SharedPreferences.getInstance();
       
-      // Save token
-      await prefs.setString('auth_token', loginData['token']);
+      // Save token from the root level of loginData
+      if (loginData['token'] != null) {
+        await prefs.setString('auth_token', loginData['token']);
+      }
       
       // Save user data
       if (loginData['user'] != null) {
-        await prefs.setString('user_id', loginData['user']['id']);
-        await prefs.setString('user_email', loginData['user']['email']);
+        final user = loginData['user'];
+        await prefs.setString('user_id', user['id'] ?? '');
+        await prefs.setString('user_email', user['email'] ?? '');
+        await prefs.setString('user_fullname', user['fullname']?.toString() ?? '');
+        await prefs.setString('user_dob', user['dob']?.toString() ?? '');
+        await prefs.setBool('user_is_verified', user['isVerified']?.toString() == 'true');
       }
       
       // Set login status
@@ -164,8 +171,21 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
         if (result['success'] == true) {
           print('Login successful, saving user data');
+          
+          // Create UserModel instance
+          final userModel = result['user'] as UserModel;
+          
           // Save user data and token
-          await _saveUserData(result);
+          await _saveUserData({
+            'token': result['token'],
+            'user': {
+              'id': userModel.id,
+              'email': userModel.email,
+              'fullname': userModel.fullname,
+              'dob': userModel.dob,
+              'isVerified': userModel.isVerified,
+            }
+          });
           
           print('Login successful, navigating to main screen');
           // Navigate to Main Screen on successful login
