@@ -120,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       
       // Fetch total winning amount
       final response = await http.get(
-        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/user/total-wining'),
+        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/user/total-wining'),
         headers: {
           'Authorization': 'Bearer ${await _getAuthToken()}',
           'Content-Type': 'application/json',

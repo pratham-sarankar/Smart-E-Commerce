@@ -175,7 +175,7 @@ class WalletService {
       };
 
       final response = await http.post(
-        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/user/withdrawl-request'),
+        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/user/withdrawl-request'),
         headers: headers,
         body: jsonEncode({'amount': amount}),
       );
