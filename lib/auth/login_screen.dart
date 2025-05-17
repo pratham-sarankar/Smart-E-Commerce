@@ -235,7 +235,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF19173A), Color(0xFF363079)],
+              colors: [Color(0xFF0B1D3A), Color(0xFF0B1D3A).withOpacity(0.9)],
               stops: [0.2, 0.8],
             ),
           ),
@@ -278,11 +278,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 curve: Curves.easeOutQuart,
                                 offset: _showLoginForm ? Offset.zero : const Offset(0, 0.2),
                                 child: Padding(
-                                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                                   child: Form(
                                     key: _formKey,
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
                                         // Top section
                                         Column(
@@ -291,67 +292,117 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                             Stack(
                                               alignment: Alignment.center,
                                               children: [
+                                                // Outer glow effect
                                                 Container(
-                                                  width: 90,
-                                                  height: 90,
+                                                  width: 120,
+                                                  height: 120,
                                                   decoration: BoxDecoration(
-                                                    shape: BoxShape.circle,
+                                                    borderRadius: BorderRadius.circular(24),
+                                                    gradient: RadialGradient(
+                                                      colors: [
+                                                        Color(0xFF5F67EE).withOpacity(0.15),
+                                                        Color(0xFF5F67EE).withOpacity(0.05),
+                                                        Colors.transparent,
+                                                      ],
+                                                      stops: [0.0, 0.6, 1.0],
+                                                    ),
+                                                  ),
+                                                ),
+                                                // Middle gradient container
+                                                Container(
+                                                  width: 110,
+                                                  height: 110,
+                                                  decoration: BoxDecoration(
+                                                    borderRadius: BorderRadius.circular(22),
                                                     gradient: LinearGradient(
                                                       begin: Alignment.topLeft,
                                                       end: Alignment.bottomRight,
                                                       colors: [
-                                                        Color(0xFF5F67EE).withOpacity(0.2),
-                                                        Color(0xFF5F67EE).withOpacity(0.05),
+                                                        Color(0xFFFFD700).withOpacity(0.2),
+                                                        Color(0xFFFFD700).withOpacity(0.05),
                                                       ],
                                                     ),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: Color(0xFF5F67EE).withOpacity(0.2),
+                                                        blurRadius: 15,
+                                                        spreadRadius: 2,
+                                                        offset: Offset(0, 4),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
+                                                // Logo container
                                                 Hero(
                                                   tag: 'login_logo',
                                                   child: Material(
                                                     type: MaterialType.transparency,
                                                     child: Container(
-                                                      padding: EdgeInsets.all(8),
+                                                      width: 100,
+                                                      height: 100,
+                                                      padding: EdgeInsets.all(12),
                                                       decoration: BoxDecoration(
-                                                        shape: BoxShape.circle,
+                                                        borderRadius: BorderRadius.circular(20),
                                                         color: Colors.white,
                                                         boxShadow: [
                                                           BoxShadow(
-                                                            color: Colors.black.withOpacity(0.08),
-                                                            blurRadius: 8,
-                                                            spreadRadius: 1,
-                                                            offset: Offset(0, 2),
+                                                            color: Colors.black.withOpacity(0.1),
+                                                            blurRadius: 10,
+                                                            spreadRadius: 0,
+                                                            offset: Offset(0, 4),
+                                                          ),
+                                                          BoxShadow(
+                                                            color: Colors.white,
+                                                            blurRadius: 4,
+                                                            spreadRadius: 2,
+                                                            offset: Offset(0, -2),
                                                           ),
                                                         ],
                                                       ),
-                                                      child: Image.network(
-                                                        'https://cdn.builder.io/api/v1/image/assets/TEMP/2b11c06bdf765b35249d2275cc985e97f0b5fa2a',
-                                                        width: 50,
-                                                        height: 55,
-                                                        fit: BoxFit.contain,
+                                                      child: Container(
+                                                        decoration: BoxDecoration(
+                                                          borderRadius: BorderRadius.circular(16),
+                                                          gradient: LinearGradient(
+                                                            begin: Alignment.topLeft,
+                                                            end: Alignment.bottomRight,
+                                                            colors: [
+                                                              Colors.white,
+                                                              Colors.white.withOpacity(0.9),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        child: ClipRRect(
+                                                          borderRadius: BorderRadius.circular(16),
+                                                          child: Image.asset(
+                                                            'assets/icon/icon.png',
+                                                            width: double.infinity,
+                                                            height: double.infinity,
+                                                            fit: BoxFit.cover,
+                                                          ),
+                                                        ),
                                                       ),
                                                     ),
                                                   ),
                                                 ),
                                               ],
                                             ),
-                                            const SizedBox(height: 8),
+                                            const SizedBox(height: 20),
                                             Hero(
                                               tag: 'login_title',
                                               child: Material(
                                                 type: MaterialType.transparency,
                                                 child: Text(
-                                                  'MASTI LOTTIE',
+                                                  'Lakhpati Club',
                                                   style: TextStyle(
-                                                    fontSize: 18,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Color(0xFF5F67EE),
-                                                    letterSpacing: 2.0,
+                                                    fontSize: 26,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: Color(0xFFFFD700),
+                                                    letterSpacing: 1.5,
                                                     shadows: [
                                                       Shadow(
-                                                        color: Colors.black.withOpacity(0.12),
+                                                        color: Colors.black.withOpacity(0.1),
                                                         offset: Offset(1, 2),
-                                                        blurRadius: 1,
+                                                        blurRadius: 2,
                                                       ),
                                                     ],
                                                   ),
@@ -361,7 +412,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                           ],
                                         ),
                                         
-                                        const SizedBox(height: 20),
+                                        const SizedBox(height: 32),
                                         
                                         // Middle section
                                         Column(
@@ -373,8 +424,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                               decoration: BoxDecoration(
                                                 gradient: LinearGradient(
                                                   colors: [
-                                                    Color(0xFF5F67EE).withOpacity(0.08),
-                                                    Color(0xFF5F67EE).withOpacity(0.02),
+                                                    Color(0xFFFFD700).withOpacity(0.1),
+                                                    Color(0xFFFFD700).withOpacity(0.05),
                                                   ],
                                                   begin: Alignment.topLeft,
                                                   end: Alignment.bottomRight,
@@ -388,7 +439,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                     style: TextStyle(
                                                       fontSize: 24,
                                                       fontWeight: FontWeight.w600,
-                                                      color: Color(0xFF19173A),
+                                                      color: Color(0xFF0B1D3A),
                                                     ),
                                                   ),
                                                   const SizedBox(height: 6),
@@ -396,7 +447,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                     'By signing in you are agreeing our',
                                                     style: TextStyle(
                                                       fontSize: 13,
-                                                      color: Colors.black54,
+                                                      color: Color(0xFF0B1D3A),
                                                     ),
                                                   ),
                                                   GestureDetector(
@@ -405,7 +456,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                       'Term and privacy policy',
                                                       style: TextStyle(
                                                         fontSize: 13,
-                                                        color: Color(0xFF5F67EE),
+                                                        color: Color(0xFFFFD700),
                                                         fontWeight: FontWeight.bold,
                                                         decoration: TextDecoration.underline,
                                                       ),
@@ -439,13 +490,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                   }
                                                   return null;
                                                 },
-                                                style: const TextStyle(fontSize: 15),
+                                                style: const TextStyle(
+                                                  fontSize: 15,
+                                                  color: Color(0xFF0B1D3A),
+                                                ),
                                                 decoration: InputDecoration(
                                                   hintText: 'Email Address',
-                                                  hintStyle: const TextStyle(fontSize: 15),
+                                                  hintStyle: const TextStyle(
+                                                    fontSize: 15,
+                                                    color: Color(0xFF0B1D3A),
+                                                  ),
                                                   prefixIcon: Container(
                                                     margin: EdgeInsets.only(left: 12, right: 8),
-                                                    child: Icon(Icons.email_outlined, color: Color(0xFF5F67EE), size: 22),
+                                                    child: Icon(Icons.email_outlined, color: Color(0xFFFFD700), size: 22),
                                                   ),
                                                   filled: true,
                                                   fillColor: Colors.white,
@@ -460,7 +517,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                   ),
                                                   focusedBorder: OutlineInputBorder(
                                                     borderRadius: BorderRadius.circular(12),
-                                                    borderSide: BorderSide(color: Color(0xFF5F67EE), width: 1.0),
+                                                    borderSide: BorderSide(color: Color(0xFFFFD700), width: 1.0),
                                                   ),
                                                   errorBorder: OutlineInputBorder(
                                                     borderRadius: BorderRadius.circular(12),
@@ -491,14 +548,20 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                   }
                                                   return null;
                                                 },
-                                                style: const TextStyle(fontSize: 15),
+                                                style: const TextStyle(
+                                                  fontSize: 15,
+                                                  color: Color(0xFF0B1D3A),
+                                                ),
                                                 obscureText: _obscurePassword,
                                                 decoration: InputDecoration(
                                                   hintText: 'Password',
-                                                  hintStyle: const TextStyle(fontSize: 15),
+                                                  hintStyle: const TextStyle(
+                                                    fontSize: 15,
+                                                    color: Color(0xFF0B1D3A),
+                                                  ),
                                                   prefixIcon: Container(
                                                     margin: EdgeInsets.only(left: 12, right: 8),
-                                                    child: Icon(Icons.lock_outline, color: Color(0xFF5F67EE), size: 22),
+                                                    child: Icon(Icons.lock_outline, color: Color(0xFFFFD700), size: 22),
                                                   ),
                                                   suffixIcon: IconButton(
                                                     icon: Icon(
@@ -525,7 +588,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                   ),
                                                   focusedBorder: OutlineInputBorder(
                                                     borderRadius: BorderRadius.circular(12),
-                                                    borderSide: BorderSide(color: Color(0xFF5F67EE), width: 1.0),
+                                                    borderSide: BorderSide(color: Color(0xFFFFD700), width: 1.0),
                                                   ),
                                                   errorBorder: OutlineInputBorder(
                                                     borderRadius: BorderRadius.circular(12),
@@ -548,7 +611,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                     width: 22,
                                                     height: 22,
                                                     decoration: BoxDecoration(
-                                                      color: _rememberPassword ? Color(0xFF5F67EE) : Colors.white,
+                                                      color: _rememberPassword ? Color(0xFFFFD700) : Colors.white,
                                                       borderRadius: BorderRadius.circular(6),
                                                       border: _rememberPassword 
                                                           ? null 
@@ -579,7 +642,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                   child: const Text(
                                                     'Remember password',
                                                     style: TextStyle(
-                                                      color: Colors.black54,
+                                                      color: Color(0xFF0B1D3A),
                                                       fontSize: 13,
                                                       fontWeight: FontWeight.w500,
                                                     ),
@@ -594,7 +657,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                   child: const Text(
                                                     'Forget password',
                                                     style: TextStyle(
-                                                      color: Color(0xFF5F67EE),
+                                                      color: Color(0xFFFFD700),
                                                       fontWeight: FontWeight.w500,
                                                       fontSize: 13,
                                                     ),
@@ -620,7 +683,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                       borderRadius: BorderRadius.circular(12),
                                                       boxShadow: [
                                                         BoxShadow(
-                                                          color: Color(0xFF5F67EE).withOpacity(0.3),
+                                                          color: Color(0xFFFFD700).withOpacity(0.3),
                                                           blurRadius: 8,
                                                           spreadRadius: 0,
                                                           offset: Offset(0, 4),
@@ -636,7 +699,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                         : ElevatedButton(
                                                             onPressed: _login,
                                                             style: ElevatedButton.styleFrom(
-                                                              backgroundColor: Color(0xFF5F67EE),
+                                                              backgroundColor: Color(0xFFFFD700),
                                                               shape: RoundedRectangleBorder(
                                                                 borderRadius: BorderRadius.circular(12),
                                                               ),
@@ -646,7 +709,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                             child: const Text(
                                                               'Login',
                                                               style: TextStyle(
-                                                                color: Colors.white,
+                                                                color: Color(0xFF0B1D3A),
                                                                 fontSize: 16,
                                                                 fontWeight: FontWeight.bold,
                                                               ),
@@ -675,7 +738,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                         Navigator.pushNamed(context, '/register');
                                                       },
                                                       style: OutlinedButton.styleFrom(
-                                                        side: const BorderSide(color: Color(0xFF5F67EE), width: 1.5),
+                                                        side: const BorderSide(color: Color(0xFFFFD700), width: 1.5),
                                                         shape: RoundedRectangleBorder(
                                                           borderRadius: BorderRadius.circular(12),
                                                         ),
@@ -684,7 +747,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                       child: const Text(
                                                         'Register',
                                                         style: TextStyle(
-                                                          color: Color(0xFF5F67EE),
+                                                          color: Color(0xFFFFD700),
                                                           fontSize: 16,
                                                           fontWeight: FontWeight.bold,
                                                         ),
@@ -693,41 +756,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                   ),
                                                 ),
                                               ],
-                                            ),
-                                            const SizedBox(height: 24),
-                                            Center(
-                                              child: const Text(
-                                                'Login with touch ID',
-                                                style: TextStyle(
-                                                  color: Colors.black54,
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 10),
-                                            Center(
-                                              child: Container(
-                                                width: 54,
-                                                height: 54,
-                                                decoration: BoxDecoration(
-                                                  color: Color(0xFF5F67EE).withOpacity(0.12),
-                                                  borderRadius: BorderRadius.circular(15),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Color(0xFF5F67EE).withOpacity(0.1),
-                                                      blurRadius: 8,
-                                                      spreadRadius: 0,
-                                                      offset: Offset(0, 3),
-                                                    ),
-                                                  ],
-                                                ),
-                                                child: const Icon(
-                                                  Icons.fingerprint,
-                                                  color: Color(0xFF5F67EE),
-                                                  size: 32,
-                                                ),
-                                              ),
                                             ),
                                           ],
                                         ),

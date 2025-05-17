@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:smart_eommerce/screens/main_screen.dart';
+import 'package:smart_eommerce/screens/user_info_screen.dart';
 import 'package:smart_eommerce/services/user_service.dart';
 import 'package:smart_eommerce/models/user_model.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:smart_eommerce/screens/home_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -87,7 +89,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: const Color(0xFF0B1D3A),
       body: Stack(
         children: [
           // Background structure
@@ -134,17 +136,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               color: Colors.white.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: IconButton(
-                              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 16),
-                              onPressed: () {
-                                Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => const MainScreen()),
-                                  (route) => false,
-                                );
-                              },
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                splashColor: Colors.white.withOpacity(0.2),
+                                highlightColor: Colors.white.withOpacity(0.1),
+                                onTap: () {
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    FadePageRoute(page: const MainScreen()),
+                                    (route) => false,
+                                  );
+                                },
+                                child: const Center(
+                                  child: Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 16),
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -228,10 +236,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         // Settings items
                         SettingsItem(
                           icon: Icons.person,
-                          iconColor: const Color(0xFF5030E8),
+                          iconColor: const Color(0xFFFFD700),
                           title: 'Personal Information',
                           subtitle: 'Your account information',
-                          onTap: () {},
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => UserInfoScreen()),
+                            );
+                          },
                         ),
                         
                         // Add Auto-deduct toggle
@@ -240,7 +253,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1E1E1E),
+                              color: const Color(0xFF0B1D3A),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
@@ -249,10 +262,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF5030E8).withOpacity(0.1),
+                                    color: const Color(0xFFFFD700).withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: const Icon(Icons.auto_awesome, color: Color(0xFF5030E8), size: 22),
+                                  child: const Icon(Icons.auto_awesome, color: Color(0xFFFFD700), size: 22),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -279,11 +292,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     ],
                                   ),
                                 ),
-                                Switch(
-                                  value: _isAutoDeductEnabled,
-                                  onChanged: _toggleAutoDeduct,
-                                  activeColor: const Color(0xFF5030E8),
-                                  activeTrackColor: const Color(0xFF5030E8).withOpacity(0.5),
+                                Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Switch.adaptive(
+                                      value: _isAutoDeductEnabled,
+                                      onChanged: _toggleAutoDeduct,
+                                      activeColor: const Color(0xFFFFD700),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -304,7 +322,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         
                         SettingsItem(
                           icon: Icons.feedback,
-                          iconColor: const Color(0xFF5030E8),
+                          iconColor: const Color(0xFFFFD700),
                           title: 'Feedback',
                           subtitle: 'Chat and notifications settings',
                           onTap: () {},
@@ -312,7 +330,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         
                         SettingsItem(
                           icon: Icons.info,
-                          iconColor: const Color(0xFF5030E8),
+                          iconColor: const Color(0xFFFFD700),
                           title: 'About',
                           subtitle: 'Version 1.2',
                           onTap: () {},
@@ -320,7 +338,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         
                         SettingsItem(
                           icon: Icons.share,
-                          iconColor: const Color(0xFF5030E8),
+                          iconColor: const Color(0xFFFFD700),
                           title: 'Invite a Friend',
                           subtitle: 'Invite a friend to make this app',
                           onTap: () async {
@@ -353,7 +371,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 barrierDismissible: false,
                                 builder: (BuildContext context) {
                                   return AlertDialog(
-                                    backgroundColor: const Color(0xFF2A2A2A),
+                                    backgroundColor: const Color(0xFF0B1D3A),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(20.0),
                                     ),
@@ -363,12 +381,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         Container(
                                           padding: const EdgeInsets.all(12),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFF5030E8).withOpacity(0.15),
+                                            color: const Color(0xFFFFD700).withOpacity(0.15),
                                             shape: BoxShape.circle,
                                           ),
                                           child: const Icon(
                                             Icons.logout_rounded,
-                                            color: Color(0xFF5030E8),
+                                            color: Color(0xFFFFD700),
                                             size: 34,
                                           ),
                                         ),
@@ -422,8 +440,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                             Expanded(
                                               child: ElevatedButton(
                                                 style: ElevatedButton.styleFrom(
-                                                  backgroundColor: const Color(0xFF5030E8),
-                                                  foregroundColor: Colors.white,
+                                                  backgroundColor: const Color(0xFFFFD700),
+                                                  foregroundColor: const Color(0xFF0B1D3A),
                                                   padding: const EdgeInsets.symmetric(vertical: 12),
                                                   shape: RoundedRectangleBorder(
                                                     borderRadius: BorderRadius.circular(12),
@@ -527,7 +545,7 @@ class SettingsItem extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E1E1E),
+            color: const Color(0xFF0B1D3A),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(

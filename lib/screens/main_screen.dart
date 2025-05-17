@@ -35,10 +35,10 @@ class _MainScreenState extends State<MainScreen> {
       body: _screens[_selectedIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.black,
+          color: const Color(0xFF0B1D3A), // Navy Blue background
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: const Color(0xFFFFD700).withOpacity(0.2), // Gold shadow
               blurRadius: 10,
               offset: const Offset(0, -5),
             ),
@@ -100,7 +100,8 @@ class NavBarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isSelected ? const Color(0xFF5030E8) : Colors.white;
+    final selectedColor = const Color(0xFFFFD700); // Gold for selected
+    final unselectedColor = Colors.white54; // Light white for unselected
     
     return InkWell(
       onTap: onTap,
@@ -117,19 +118,19 @@ class NavBarItem extends StatelessWidget {
                     image: AssetImage(profileImage!),
                     fit: BoxFit.cover,
                   ),
-                  border: Border.all(color: Colors.white, width: 2),
+                  border: Border.all(color: selectedColor, width: 2),
                 ),
               )
             : Icon(
                 icon,
-                color: color,
+                color: isSelected ? selectedColor : unselectedColor,
               ),
           const SizedBox(height: 4),
           Text(
             label,
             style: TextStyle(
               fontSize: 12,
-              color: color,
+              color: isSelected ? selectedColor : unselectedColor,
             ),
           ),
         ],

@@ -16,12 +16,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   bool _logoVisible = false;
   bool _logoScaled = false;
   bool _textVisible = false;
+  bool _taglineVisible = false;
   
   // Animation state
   double _logoPosition = -100;
   double _logoScale = 0.5;
+  double _logoOpacity = 0.0; // Add opacity for fade-in
   double _textPosition = 100; // Start below screen
   double _textOpacity = 0.0;
+  double _taglineOpacity = 0.0; // Add tagline opacity
 
   @override
   void initState() {
@@ -32,15 +35,16 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
   
   void _startSplashAnimation() {
-    // Step 1: Bring in logo from top
+    // Step 1: Bring in logo with fade-in and glow
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) {
         setState(() {
           _logoPosition = 0;
           _logoVisible = true;
+          _logoOpacity = 1.0; // Fade in logo
         });
         
-        // Step 2: Scale logo
+        // Step 2: Scale and add glow effect to logo
         Future.delayed(const Duration(milliseconds: 600), () {
           if (mounted) {
             setState(() {
@@ -57,10 +61,20 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   _textVisible = true;
                 });
                 
-                // Step 4: Check login status and navigate after animation completes
-                Future.delayed(const Duration(milliseconds: 800), () {
+                // Step 4: Add tagline with fade-in
+                Future.delayed(const Duration(milliseconds: 500), () {
                   if (mounted) {
-                    _checkLoginStatus();
+                    setState(() {
+                      _taglineOpacity = 1.0;
+                      _taglineVisible = true;
+                    });
+                    
+                    // Step 5: Check login status after animation completes
+                    Future.delayed(const Duration(milliseconds: 800), () {
+                      if (mounted) {
+                        _checkLoginStatus();
+                      }
+                    });
                   }
                 });
               }
@@ -129,11 +143,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
         body: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF19173A), Color(0xFF363079)],
+              colors: [Color(0xFF0B1D3A), Color(0xFF0B1D3A).withOpacity(0.9)],
             ),
           ),
           child: Center(
@@ -153,11 +167,60 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       tag: 'login_logo',
                       child: Material(
                         type: MaterialType.transparency,
-                        child: Image.network(
-                          'https://cdn.builder.io/api/v1/image/assets/TEMP/2b11c06bdf765b35249d2275cc985e97f0b5fa2a',
-                          width: 207,
-                          height: 227,
-                          fit: BoxFit.contain,
+                        child: AnimatedOpacity(
+                          opacity: _logoOpacity,
+                          duration: const Duration(milliseconds: 800),
+                          curve: Curves.easeIn,
+                          child: Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color(0xFFFFD700).withOpacity(0.4), // Gold shadow
+                                  blurRadius: 15,
+                                  spreadRadius: 2,
+                                  offset: Offset(0, 5),
+                                ),
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 10,
+                                  spreadRadius: 0,
+                                  offset: Offset(0, 4),
+                                ),
+                                // Glow effect
+                                BoxShadow(
+                                  color: Color(0xFFFFD700).withOpacity(0.3),
+                                  blurRadius: 25,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Colors.white,
+                                    Colors.white.withOpacity(0.9),
+                                  ],
+                                ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Image.asset(
+                                  'assets/icon/icon.png',
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -180,22 +243,49 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       child: Material(
                         type: MaterialType.transparency,
                         child: Text(
-                          'MASTI LOTTIE',
+                          'Lakhpati Club',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            foreground: Paint()
-                              ..shader = LinearGradient(
-                                colors: <Color>[
-                                  Color(0xFF7DE2FC),
-                                  Color(0xFF6366F1),
-                                ],
-                              ).createShader(Rect.fromLTWH(0.0, 0.0, 200.0, 70.0)),
-                            letterSpacing: 2,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFFFFD700),
+                            letterSpacing: 1.5,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.3),
+                                offset: Offset(1, 2),
+                                blurRadius: 4,
+                              ),
+                            ],
                           ),
                         ),
                       ),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 15),
+                
+                // Tagline animation
+                AnimatedOpacity(
+                  opacity: _taglineOpacity,
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.easeIn,
+                  child: Text(
+                    'Har Din Ek Naya Lakhpati',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withOpacity(0.8),
+                      letterSpacing: 1.2,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.2),
+                          offset: Offset(1, 1),
+                          blurRadius: 2,
+                        ),
+                      ],
                     ),
                   ),
                 ),

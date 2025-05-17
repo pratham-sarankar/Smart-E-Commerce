@@ -35,23 +35,27 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
       if (userJson != null) {
         final userData = jsonDecode(userJson);
         setState(() {
+          // Set email if available
           _emailController.text = userData['email'] ?? '';
           
-          // Split fullname into first and last name
+          // Split fullname into first and last name more robustly
           if (userData['fullname'] != null) {
-            final nameParts = userData['fullname'].split(' ');
-            _firstNameController.text = nameParts.first;
-            if (nameParts.length > 1) {
-              _lastNameController.text = nameParts.sublist(1).join(' ');
+            final nameParts = userData['fullname'].trim().split(' ');
+            if (nameParts.isNotEmpty) {
+              _firstNameController.text = nameParts.first;
+              if (nameParts.length > 1) {
+                _lastNameController.text = nameParts.sublist(1).join(' ');
+              }
             }
           }
           
-          // Split DOB into day, month, year
+          // Split DOB into day, month, year more robustly
           if (userData['dob'] != null) {
             final dobParts = userData['dob'].split('-');
             if (dobParts.length == 3) {
-              _dayController.text = dobParts[0];
-              _monthController.text = dobParts[1];
+              // Ensure day and month are padded with leading zeros if needed
+              _dayController.text = dobParts[0].padLeft(2, '0');
+              _monthController.text = dobParts[1].padLeft(2, '0');
               _yearController.text = dobParts[2];
             }
           }
@@ -60,12 +64,14 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
     } catch (e) {
       print('Error loading user data: $e');
       // Show error message to user
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading user data: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading user data: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
   
@@ -129,7 +135,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF19173A), Color(0xFF363079)],
+            colors: [Color(0xFF0B1D3A), Color(0xFF1A2F4A)],
             stops: [0.2, 0.8],
           ),
         ),
@@ -159,7 +165,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                     height: 40,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Color(0xFF5F67EE).withOpacity(0.2),
+                      color: Color(0xFFFFD700).withOpacity(0.2),
                     ),
                   ),
                 ),
@@ -171,7 +177,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                     height: 20,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Color(0xFF5F67EE).withOpacity(0.15),
+                      color: Color(0xFFFFD700).withOpacity(0.15),
                     ),
                   ),
                 ),
@@ -190,7 +196,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                           const Text(
                             'Personal Details',
                             style: TextStyle(
-                              color: Color(0xFF19173A),
+                              color: Color(0xFFFFD700),
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                             ),
@@ -199,7 +205,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                           const Text(
                             'Please provide your personal information to complete your profile',
                             style: TextStyle(
-                              color: Colors.black54,
+                              color: Colors.white70,
                               fontSize: 13,
                             ),
                           ),
@@ -257,7 +263,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                               Text(
                                 'Birthday',
                                 style: TextStyle(
-                                  color: Color(0xFF19173A),
+                                  color: Color(0xFFFFD700),
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -343,7 +349,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Color(0xFF5F67EE).withOpacity(0.3),
+                                  color: Color(0xFFFFD700).withOpacity(0.3),
                                   blurRadius: 8,
                                   spreadRadius: 0,
                                   offset: Offset(0, 4),
@@ -353,7 +359,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                             child: ElevatedButton(
                               onPressed: _isLoading ? null : _saveUserData,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFF5F67EE),
+                                backgroundColor: Color(0xFFFFD700),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -372,7 +378,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                                 : const Text(
                                     'Continue',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: Color(0xFF0B1D3A),
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -398,10 +404,10 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                       height: 40,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white,
+                        color: Color(0xFF0B1D3A),
                         boxShadow: [
                           BoxShadow(
-                            color: Color(0xFF5F67EE).withOpacity(0.2),
+                            color: Color(0xFFFFD700).withOpacity(0.2),
                             blurRadius: 8,
                             spreadRadius: 1,
                             offset: Offset(0, 2),
@@ -411,7 +417,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                       child: Center(
                         child: Icon(
                           Icons.arrow_back_ios_new_rounded,
-                          color: Color(0xFF5F67EE),
+                          color: Color(0xFFFFD700),
                           size: 16,
                         ),
                       ),
@@ -440,7 +446,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
         Text(
           label,
           style: TextStyle(
-            color: Color(0xFF19173A),
+            color: Color(0xFFFFD700),
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -463,7 +469,10 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
             keyboardType: keyboardType,
             readOnly: readOnly,
             validator: validator,
-            style: TextStyle(fontSize: 15),
+            style: TextStyle(
+              fontSize: 15,
+              color: Color(0xFF0B1D3A),
+            ),
             decoration: InputDecoration(
               hintText: hintText,
               hintStyle: TextStyle(fontSize: 14, color: Colors.black38),
@@ -472,15 +481,15 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
               contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
+                borderSide: BorderSide(color: Color(0xFFFFD700).withOpacity(0.5), width: 0.5),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
+                borderSide: BorderSide(color: Color(0xFFFFD700).withOpacity(0.5), width: 0.5),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Color(0xFF5F67EE), width: 1.0),
+                borderSide: BorderSide(color: Color(0xFFFFD700), width: 1.0),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -506,7 +515,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
         Text(
           label,
           style: TextStyle(
-            color: Color(0xFF19173A),
+            color: Color(0xFFFFD700),
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
@@ -528,7 +537,10 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
             controller: controller,
             keyboardType: TextInputType.number,
             maxLength: maxLength,
-            style: TextStyle(fontSize: 15),
+            style: TextStyle(
+              fontSize: 15,
+              color: Color(0xFF0B1D3A),
+            ),
             validator: validator,
             decoration: InputDecoration(
               hintText: hint,
@@ -538,15 +550,15 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
               contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
+                borderSide: BorderSide(color: Color(0xFFFFD700).withOpacity(0.5), width: 0.5),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
+                borderSide: BorderSide(color: Color(0xFFFFD700).withOpacity(0.5), width: 0.5),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Color(0xFF5F67EE), width: 1.0),
+                borderSide: BorderSide(color: Color(0xFFFFD700), width: 1.0),
               ),
             ),
           ),

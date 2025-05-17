@@ -40,11 +40,11 @@ class _AccountSuccessScreenState extends State<AccountSuccessScreen> {
       body: Container(
         height: MediaQuery.of(context).size.height,
         width: MediaQuery.of(context).size.width,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF19173A), Color(0xFF363079)],
+            colors: [Color(0xFF0B1D3A), Color(0xFF0B1D3A).withOpacity(0.9)],
             stops: [0.2, 0.8],
           ),
         ),
@@ -120,8 +120,8 @@ class _AccountSuccessScreenState extends State<AccountSuccessScreen> {
                             Navigator.of(context).pushReplacementNamed('/main');
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF590DD8),
-                            foregroundColor: Colors.white,
+                            backgroundColor: Color(0xFFFFD700),
+                            foregroundColor: Color(0xFF0B1D3A),
                             padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(24),

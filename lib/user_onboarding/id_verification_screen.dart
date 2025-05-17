@@ -238,11 +238,11 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
       body: Container(
         height: MediaQuery.of(context).size.height,
         width: MediaQuery.of(context).size.width,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF19173A), Color(0xFF363079)],
+            colors: [Color(0xFF0B1D3A), Color(0xFF0B1D3A).withOpacity(0.9)],
             stops: [0.2, 0.8],
           ),
         ),
@@ -272,7 +272,7 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
                     height: 40,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Color(0xFF5F67EE).withOpacity(0.2),
+                      color: Color(0xFFFFD700).withOpacity(0.2),
                     ),
                   ),
                 ),
@@ -284,7 +284,7 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
                     height: 20,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Color(0xFF5F67EE).withOpacity(0.15),
+                      color: Color(0xFFFFD700).withOpacity(0.15),
                     ),
                   ),
                 ),
@@ -418,7 +418,7 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Color(0xFF5F67EE).withOpacity(0.3),
+                                  color: Color(0xFFFFD700).withOpacity(0.3),
                                   blurRadius: 8,
                                   spreadRadius: 0,
                                   offset: Offset(0, 4),
@@ -428,7 +428,7 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
                             child: ElevatedButton(
                               onPressed: _isLoading ? null : _uploadDocuments,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFF5F67EE),
+                                backgroundColor: Color(0xFFFFD700),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -476,7 +476,7 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
                         color: Colors.white,
                         boxShadow: [
                           BoxShadow(
-                            color: Color(0xFF5F67EE).withOpacity(0.2),
+                            color: Color(0xFFFFD700).withOpacity(0.2),
                             blurRadius: 8,
                             spreadRadius: 1,
                             offset: Offset(0, 2),
@@ -486,7 +486,7 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
                       child: Center(
                         child: Icon(
                           Icons.arrow_back_ios_new_rounded,
-                          color: Color(0xFF5F67EE),
+                          color: Color(0xFFFFD700),
                           size: 18,
                         ),
                       ),
@@ -536,7 +536,10 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
             controller: controller,
             keyboardType: keyboardType,
             validator: validator,
-            style: TextStyle(fontSize: 15),
+            style: TextStyle(
+              fontSize: 15,
+              color: Color(0xFF0B1D3A),
+            ),
             decoration: InputDecoration(
               hintText: hintText,
               hintStyle: TextStyle(fontSize: 14, color: Colors.black38),
@@ -597,12 +600,12 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Color(0xFF5F67EE).withOpacity(0.1),
+                  color: Color(0xFFFFD700).withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.photo_camera_outlined,
-                  color: Color(0xFF5F67EE),
+                  color: Color(0xFFFFD700),
                   size: 22,
                 ),
               ),
@@ -656,7 +659,7 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
                   child: Container(
                     padding: EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
-                      color: Color(0xFF5F67EE).withOpacity(0.1),
+                      color: Color(0xFFFFD700).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(
@@ -665,14 +668,14 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
                         children: [
                           Icon(
                             isCaptured ? Icons.refresh : Icons.camera_alt_outlined,
-                            color: Color(0xFF5F67EE),
+                            color: Color(0xFFFFD700),
                             size: 18,
                           ),
                           SizedBox(width: 8),
                           Text(
                             isCaptured ? 'Retake' : 'Camera',
                             style: TextStyle(
-                              color: Color(0xFF5F67EE),
+                              color: Color(0xFFFFD700),
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
                             ),
@@ -691,7 +694,7 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
                   child: Container(
                     padding: EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
-                      color: Color(0xFF5F67EE).withOpacity(0.1),
+                      color: Color(0xFFFFD700).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(
@@ -700,14 +703,14 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
                         children: [
                           Icon(
                             Icons.photo_library_outlined,
-                            color: Color(0xFF5F67EE),
+                            color: Color(0xFFFFD700),
                             size: 18,
                           ),
                           SizedBox(width: 8),
                           Text(
                             'Gallery',
                             style: TextStyle(
-                              color: Color(0xFF5F67EE),
+                              color: Color(0xFFFFD700),
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
                             ),

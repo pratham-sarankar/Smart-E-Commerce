@@ -127,6 +127,11 @@ class AuthService {
           id: userMap['id'] ?? '',
           email: userMap['email'] ?? '',
           token: userMap['token'] ?? '',
+          fullname: userMap['fullname'] ?? '',
+          dob: userMap['dob'] ?? '',
+          isVerified: userMap['isVerified'] ?? '',
+          userKyc: userMap['userKyc'] != null ? UserKyc.fromJson(userMap['userKyc']) : null,
+          wallet: userMap['wallet'] != null ? WalletModel.fromJson(userMap['wallet']) : null,
         );
       } catch (e) {
         return null;

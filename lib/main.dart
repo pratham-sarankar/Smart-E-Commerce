@@ -30,12 +30,30 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primaryColor: Color(0xFF5F67EE),
+        primaryColor: Color(0xFF0B1D3A),
         colorScheme: ColorScheme.light(
-          primary: Color(0xFF5F67EE),
-          secondary: Color(0xFF19173A),
+          primary: Color(0xFF0B1D3A),
+          secondary: Color(0xFFFFD700),
+          background: Color(0xFF0B1D3A),
+          surface: Color(0xFF0B1D3A),
         ),
-        scaffoldBackgroundColor: Colors.white,
+        scaffoldBackgroundColor: Color(0xFF0B1D3A),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Color(0xFF0B1D3A),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        textTheme: TextTheme(
+          bodyLarge: TextStyle(color: Colors.white),
+          bodyMedium: TextStyle(color: Color(0xFFFFD700)),
+          displayLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xFFFFD700),
+            foregroundColor: Color(0xFF0B1D3A),
+          ),
+        ),
       ),
       home: const SplashScreen(),
       routes: {

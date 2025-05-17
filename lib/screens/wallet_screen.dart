@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smart_eommerce/screens/main_screen.dart';
+import 'package:smart_eommerce/screens/home_screen.dart';
 import '../services/wallet_service.dart';
 import 'package:intl/intl.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
@@ -104,7 +105,7 @@ class _WalletScreenState extends State<WalletScreen> {
       if (!mounted) return;
       
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(verifyResponse['message'] ?? 'Payment successful!')),
+        SnackBar(content: Text(verifyResponse['message'], style: TextStyle(color: Colors.white),)),
       );
     } catch (e) {
       if (!mounted) return;
@@ -147,267 +148,474 @@ class _WalletScreenState extends State<WalletScreen> {
 
   Future<void> _handleDeposit() async {
     final TextEditingController amountController = TextEditingController();
+    final FocusNode amountFocusNode = FocusNode();
     
-    showDialog(
+    // Predefined deposit amounts
+    final depositAmounts = [
+      100, 500, 1000, 2000, 5000
+    ];
+
+    await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2A2A2A),
-        title: const Text(
-          'Deposit Amount',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: TextField(
-          controller: amountController,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            hintText: 'Enter amount in INR',
-            hintStyle: TextStyle(color: Colors.grey),
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.grey),
-            ),
-            focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Color(0xFF5030E8)),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (amountController.text.isEmpty) return;
-              
-              final amount = double.tryParse(amountController.text);
-              if (amount == null || amount <= 0) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a valid amount')),
-                );
-                return;
-              }
-
-              // Show confirmation dialog
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  backgroundColor: const Color(0xFF2A2A2A),
-                  title: const Text(
-                    'Confirm Deposit',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  content: Text(
-                    'You are about to deposit ${_currencyFormat.format(amount)}. Do you want to continue?',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF5030E8),
-                      ),
-                      child: const Text('Confirm'),
-                    ),
-                  ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(20),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF1E3A70), // Darker Navy Blue
+                  const Color(0xFF0B1D3A), // Original Navy Blue
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFFFFD700), // Gold border
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFFD700).withOpacity(0.3),
+                  blurRadius: 20,
+                  spreadRadius: 5,
                 ),
-              );
-
-              if (confirmed != true) return;
-
-              Navigator.pop(context);
-              setState(() => _isLoading = true);
-
-              try {
-                // First initiate the topup to get order details
-                final topupResponse = await _walletService.topupWallet(amount);
-                
-                // Store the amount directly without multiplying by 100
-                _currentPaymentAmount = amount.toInt();
-                
-                // Initialize Razorpay only when needed
-                _initializeRazorpay();
-                
-                // Initialize Razorpay payment
-                var options = {
-                  'key': 'rzp_test_NMHJrIP0HgARfE',
-                  'amount': _currentPaymentAmount!, // Amount in smallest currency unit
-                  'name': 'Smart E-commerce',
-                  'description': 'Wallet Top-up',
-                  'order_id': topupResponse['id'],
-                  'prefill': {
-                    'contact': '',
-                    'email': '',
-                  },
-                  'external': {
-                    'wallets': ['paytm']
-                  }
-                };
-
-                _razorpay!.open(options);
-              } catch (e) {
-                if (e.toString().contains('Unauthorized') || 
-                    e.toString().contains('Authentication token not found')) {
-                  _handleAuthError(context);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: ${e.toString()}')),
-                  );
-                }
-              } finally {
-                setState(() => _isLoading = false);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF5030E8),
+              ],
             ),
-            child: const Text('Deposit'),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Header with icon
+                  Container(
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFD700).withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.account_balance_wallet,
+                      color: Color(0xFFFFD700),
+                      size: 40,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Title
+                  const Text(
+                    'Add Money to Wallet',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  
+                  // Amount Input
+                  TextField(
+                    controller: amountController,
+                    focusNode: amountFocusNode,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white, fontSize: 18),
+                    decoration: InputDecoration(
+                      hintText: 'Enter amount',
+                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                      prefixIcon: const Icon(Icons.currency_rupee, color: Color(0xFFFFD700)),
+                      filled: true,
+                      fillColor: const Color(0xFF1E3A70),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFFFD700),
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  
+                  // Quick Amount Buttons
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: depositAmounts.map((amount) => 
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: () {
+                            amountController.text = amount.toString();
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E3A70),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: const Color(0xFFFFD700).withOpacity(0.5),
+                              ),
+                            ),
+                            child: Text(
+                              '₹$amount',
+                              style: const TextStyle(
+                                color: Color(0xFFFFD700),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    ).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.white54),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(color: Colors.white54),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            if (amountController.text.isEmpty) return;
+                            
+                            final amount = double.tryParse(amountController.text);
+                            if (amount == null || amount <= 0) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please enter a valid amount')),
+                              );
+                              return;
+                            }
+
+                            // Existing deposit logic
+                            Navigator.pop(context);
+                            setState(() => _isLoading = true);
+
+                            try {
+                              final topupResponse = await _walletService.topupWallet(amount);
+                              
+                              _currentPaymentAmount = amount.toInt();
+                              _initializeRazorpay();
+                              
+                              var options = {
+                                'key': 'rzp_test_NMHJrIP0HgARfE',
+                                'amount': _currentPaymentAmount!,
+                                'name': 'Smart E-commerce',
+                                'description': 'Wallet Top-up',
+                                'order_id': topupResponse['id'],
+                                'prefill': {
+                                  'contact': '',
+                                  'email': '',
+                                },
+                                'external': {
+                                  'wallets': ['paytm']
+                                }
+                              };
+
+                              _razorpay!.open(options);
+                            } catch (e) {
+                              if (e.toString().contains('Unauthorized') || 
+                                  e.toString().contains('Authentication token not found')) {
+                                _handleAuthError(context);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Error: ${e.toString()}')),
+                                );
+                              }
+                            } finally {
+                              setState(() => _isLoading = false);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFFD700),
+                            foregroundColor: const Color(0xFF0B1D3A),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Proceed',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
 
   Future<void> _handleWithdraw() async {
     final TextEditingController amountController = TextEditingController();
+    final FocusNode amountFocusNode = FocusNode();
     
-    showDialog(
+    // Predefined withdrawal amounts
+    final withdrawAmounts = [
+      100, 500, 1000, 2000, 5000
+    ];
+
+    await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2A2A2A),
-        title: const Text(
-          'Withdraw Amount',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: TextField(
-          controller: amountController,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            hintText: 'Enter amount in INR',
-            hintStyle: TextStyle(color: Colors.grey),
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.grey),
-            ),
-            focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Color(0xFF5030E8)),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (amountController.text.isEmpty) return;
-              
-              final amount = double.tryParse(amountController.text);
-              if (amount == null || amount <= 0) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a valid amount')),
-                );
-                return;
-              }
-
-              if (amount > _balance) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Insufficient balance')),
-                );
-                return;
-              }
-
-              // Show confirmation dialog
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  backgroundColor: const Color(0xFF2A2A2A),
-                  title: const Text(
-                    'Confirm Withdrawal',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  content: Text(
-                    'You are about to withdraw ${_currencyFormat.format(amount)}. Do you want to continue?',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF5030E8),
-                      ),
-                      child: const Text('Confirm'),
-                    ),
-                  ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(20),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF1E3A70), // Darker Navy Blue
+                  const Color(0xFF0B1D3A), // Original Navy Blue
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFFFFD700), // Gold border
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFFD700).withOpacity(0.3),
+                  blurRadius: 20,
+                  spreadRadius: 5,
                 ),
-              );
-
-              if (confirmed != true) return;
-
-              setState(() => _isLoading = true);
-
-              try {
-                final response = await _walletService.requestWithdrawal(amount);
-                
-                if (!mounted) return;
-                
-                // Show success message before closing dialog
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(response['message'] ?? 'Withdrawal request submitted')),
-                );
-                
-                // Close dialog after showing message
-                Navigator.pop(context);
-                
-                // Reload wallet data to get updated balance
-                await _loadWalletData();
-              } catch (e) {
-                if (!mounted) return;
-                
-                if (e.toString().contains('Unauthorized') || 
-                    e.toString().contains('Authentication token not found')) {
-                  _handleAuthError(context);
-                } else {
-                  // Show error message before closing dialog
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: ${e.toString()}')),
-                  );
-                }
-                // Close dialog after showing error
-                Navigator.pop(context);
-              } finally {
-                if (mounted) {
-                  setState(() => _isLoading = false);
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF5030E8),
+              ],
             ),
-            child: const Text('Withdraw'),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Header with icon
+                  Container(
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFD700).withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.monetization_on_outlined,
+                      color: Color(0xFFFFD700),
+                      size: 40,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Title
+                  const Text(
+                    'Withdraw from Wallet',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  
+                  // Current Balance Display
+                  Text(
+                    'Available Balance: ${_currencyFormat.format(_balance)}',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  
+                  // Amount Input
+                  TextField(
+                    controller: amountController,
+                    focusNode: amountFocusNode,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white, fontSize: 18),
+                    decoration: InputDecoration(
+                      hintText: 'Enter withdrawal amount',
+                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                      prefixIcon: const Icon(Icons.currency_rupee, color: Color(0xFFFFD700)),
+                      filled: true,
+                      fillColor: const Color(0xFF1E3A70),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFFFD700),
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  
+                  // Quick Amount Buttons
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: withdrawAmounts.map((amount) => 
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: () {
+                            amountController.text = amount.toString();
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E3A70),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: const Color(0xFFFFD700).withOpacity(0.5),
+                              ),
+                            ),
+                            child: Text(
+                              '₹$amount',
+                              style: const TextStyle(
+                                color: Color(0xFFFFD700),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    ).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.white54),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(color: Colors.white54),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            if (amountController.text.isEmpty) return;
+                            
+                            final amount = double.tryParse(amountController.text);
+                            if (amount == null || amount <= 0) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please enter a valid amount')),
+                              );
+                              return;
+                            }
+
+                            if (amount > _balance) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Insufficient balance')),
+                              );
+                              return;
+                            }
+
+                            setState(() => _isLoading = true);
+
+                            try {
+                              final response = await _walletService.requestWithdrawal(amount);
+                              
+                              if (!mounted) return;
+                              
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(response['message'] ?? 'Withdrawal request submitted')),
+                              );
+                              
+                              Navigator.pop(context);
+                              
+                              await _loadWalletData();
+                            } catch (e) {
+                              if (!mounted) return;
+                              
+                              if (e.toString().contains('Unauthorized') || 
+                                  e.toString().contains('Authentication token not found')) {
+                                _handleAuthError(context);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Error: ${e.toString()}')),
+                                );
+                              }
+                              Navigator.pop(context);
+                            } finally {
+                              if (mounted) {
+                                setState(() => _isLoading = false);
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFFD700),
+                            foregroundColor: const Color(0xFF0B1D3A),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Withdraw',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -415,15 +623,15 @@ class _WalletScreenState extends State<WalletScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: const Color(0xFF0B1D3A), // Navy Blue background
       body: SafeArea(
         child: Stack(
           children: [
             Column(
               children: [
-                // App bar section as Stack with line behind transparent app bar
+                // App bar section
                 Container(
-                  height: 90, // Reduced from 70 to 60
+                  height: 90,
                   child: Stack(
                     children: [
                       // App bar line as the base layer
@@ -448,20 +656,30 @@ class _WalletScreenState extends State<WalletScreen> {
                               Row(
                                 children: [
                                   // Back button - with transparent background
-                                  GestureDetector(
-                                    onTap: () {
-                                      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => MainScreen()), (route) => false);
-                                    },
-                                    child: Container(
-                                      width: 50,
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF5030E8).withOpacity(0.7),
-                                        borderRadius: BorderRadius.circular(30),
-                                      ),
-                                      child: const Icon(
-                                        Icons.arrow_back,
-                                        color: Colors.white,
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(30),
+                                      splashColor: const Color(0xFFFFD700).withOpacity(0.3),
+                                      highlightColor: const Color(0xFFFFD700).withOpacity(0.1),
+                                      onTap: () {
+                                        Navigator.pushAndRemoveUntil(
+                                          context, 
+                                          FadePageRoute(page: const MainScreen()), 
+                                          (route) => false
+                                        );
+                                      },
+                                      child: Container(
+                                        width: 50,
+                                        height: 50,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFFD700).withOpacity(0.2), // Gold with opacity
+                                          borderRadius: BorderRadius.circular(30),
+                                        ),
+                                        child: const Icon(
+                                          Icons.arrow_back,
+                                          color: Color(0xFFFFD700), // Gold
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -496,7 +714,7 @@ class _WalletScreenState extends State<WalletScreen> {
                           child: Text(
                             'Current Balance',
                             style: TextStyle(
-                              color: Colors.grey,
+                              color: Color(0xFFFFD700), // Gold color
                               fontSize: 18,
                             ),
                           ),
@@ -504,14 +722,56 @@ class _WalletScreenState extends State<WalletScreen> {
                         
                         const SizedBox(height: 10),
                         
-                        // Balance amount
+                        // Balance amount - Premium Card Style
                         Center(
-                          child: Text(
-                            _currencyFormat.format(_balance),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 48,
-                              fontWeight: FontWeight.bold,
+                          child: Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.symmetric(horizontal: 20),
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  const Color(0xFF1E3A70), // Darker Navy Blue
+                                  const Color(0xFF0B1D3A), // Original Navy Blue
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: const Color(0xFFFFD700), // Gold border
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFFFD700).withOpacity(0.3), // Gold shadow
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Total Balance',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.7),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w300,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  _currencyFormat.format(_balance),
+                                  style: const TextStyle(
+                                    color: Color(0xFFFFD700), // Gold color
+                                    fontSize: 52,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -520,57 +780,65 @@ class _WalletScreenState extends State<WalletScreen> {
                         
                         // Deposit and Withdraw buttons
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
                           child: Row(
                             children: [
                               // Deposit button
                               Expanded(
-                                child: ElevatedButton(
-                                  onPressed: _isLoading ? null : _handleDeposit,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF5030E8),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(15),
+                                    onTap: _isLoading ? null : _handleDeposit,
+                                    child: ElevatedButton.icon(
+                                      onPressed: _isLoading ? null : _handleDeposit,
+                                      icon: const Icon(Icons.add_circle_outline, size: 20, color: Color(0xFF0B1D3A)),
+                                      label: const Text(
+                                        'Add Money',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0B1D3A),
+                                        ),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFFFFD700), // Gold
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(15),
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  child: _isLoading
-                                      ? const SizedBox(
-                                          height: 20,
-                                          width: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                          ),
-                                        )
-                                      : const Text(
-                                          'Deposit',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
                                 ),
                               ),
                               const SizedBox(width: 12),
                               // Withdraw button
                               Expanded(
-                                child: OutlinedButton(
-                                  onPressed: _isLoading ? null : _handleWithdraw,
-                                  style: OutlinedButton.styleFrom(
-                                    side: const BorderSide(color: Colors.grey, width: 1.0),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'Withdraw',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(15),
+                                    onTap: _isLoading ? null : _handleWithdraw,
+                                    child: OutlinedButton.icon(
+                                      onPressed: _isLoading ? null : _handleWithdraw,
+                                      icon: const Icon(Icons.arrow_circle_down_outlined, size: 20, color: Color(0xFFFFD700)),
+                                      label: const Text(
+                                        'Withdraw',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFFFD700),
+                                        ),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        side: const BorderSide(color: Color(0xFFFFD700), width: 1.5),
+                                        foregroundColor: const Color(0xFFFFD700),
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(15),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -582,14 +850,31 @@ class _WalletScreenState extends State<WalletScreen> {
                         const SizedBox(height: 30),
                         
                         // Transaction History
-                        const Center(
-                          child: Text(
-                            'Transaction History',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 0.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Transaction History',
+                                style: TextStyle(
+                                  color: Color(0xFFFFD700), // Gold color
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: null, // Optional: Add functionality if needed
+                                icon: const Icon(Icons.history, color: Colors.white54),
+                                label: const Text(
+                                  'View All',
+                                  style: TextStyle(
+                                    color: Colors.white54,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         
@@ -600,7 +885,7 @@ class _WalletScreenState extends State<WalletScreen> {
                           child: _isLoading
                               ? const Center(
                                   child: CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF5030E8)),
+                                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)), // Gold color
                                   ),
                                 )
                               : _transactions.isEmpty
@@ -608,7 +893,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                       child: Text(
                                         'No transactions yet',
                                         style: TextStyle(
-                                          color: Colors.grey,
+                                          color: Colors.white54,
                                           fontSize: 16,
                                         ),
                                       ),
@@ -645,7 +930,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 color: Colors.black.withOpacity(0.5),
                 child: const Center(
                   child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF5030E8)),
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)), // Gold color
                   ),
                 ),
               ),
@@ -674,69 +959,90 @@ class TransactionItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.transparent,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.grey,
-          width: 1.0,
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        onTap: () {
+          // Optional: Add transaction details view or action
+        },
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E3A70), // Darker Navy Blue
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFFFFD700).withOpacity(0.3), // Gold border
+              width: 1.0,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Text(
-                    type,
-                    style: TextStyle(
-                      color: isDeposit ? Colors.green : Colors.grey,
-                      fontSize: 12,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            type,
+                            style: TextStyle(
+                              color: isDeposit ? const Color(0xFF00FF00) : const Color(0xFFFFD700),
+                              fontSize: 12,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: status == 'Completed' 
+                              ? const Color(0xFF00FF00).withOpacity(0.2) 
+                              : const Color(0xFFFFD700).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            status,
+                            style: TextStyle(
+                              color: status == 'Completed' ? const Color(0xFF00FF00) : const Color(0xFFFFD700),
+                              fontSize: 10,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: status == 'Completed' ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      status,
-                      style: TextStyle(
-                        color: status == 'Completed' ? Colors.green : Colors.orange,
-                        fontSize: 10,
+                    const SizedBox(height: 2),
+                    Text(
+                      account,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      maxLines: 1,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(width: 8),
               Text(
-                account,
-                style: const TextStyle(
-                  color: Colors.white,
+                amount,
+                style: TextStyle(
+                  color: isDeposit ? const Color(0xFF00FF00) : Colors.white,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
-          Text(
-            amount,
-            style: TextStyle(
-              color: isDeposit ? Colors.green : Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

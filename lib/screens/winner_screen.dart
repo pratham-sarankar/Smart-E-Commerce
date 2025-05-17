@@ -5,6 +5,10 @@ import 'package:smart_eommerce/services/winner_service.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'dart:async';
+import 'package:flutter/cupertino.dart';
+import 'package:intl/intl.dart';
 
 class WinnerScreen extends StatefulWidget {
   const WinnerScreen({Key? key}) : super(key: key);
@@ -20,6 +24,8 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
   WinnerResponse? _winnerResponse;
   List<WinnerData> _pastWinners = [];
   bool _isLoading = true;
+  Razorpay? _razorpay;
+  bool _isDonationLoading = false;
 
   @override
   void initState() {
@@ -32,6 +38,61 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
     _fetchTodayWinner();
     _fetchPastWinners();
+    _initializeRazorpay();
+  }
+
+  void _initializeRazorpay() {
+    _razorpay = Razorpay();
+    _razorpay!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay!.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay!.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Thank you for your donation!')),
+    );
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Payment failed: ${response.message}')),
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('External wallet selected: ${response.walletName}')),
+    );
+  }
+
+  Future<void> _handleDonation() async {
+    try {
+      setState(() => _isDonationLoading = true);
+      
+      // Initialize Razorpay payment
+      var options = {
+        'key': 'rzp_test_NMHJrIP0HgARfE',
+        'amount': 100, 
+        'name': 'Smart E-commerce',
+        'description': '1 Rupee Donation',
+        'prefill': {
+          'contact': '',
+          'email': '',
+        },
+        'external': {
+          'wallets': ['paytm']
+        }
+      };
+
+      _razorpay!.open(options);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    } finally {
+      setState(() => _isDonationLoading = false);
+    }
   }
 
   Future<void> _fetchTodayWinner() async {
@@ -176,13 +237,14 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
   @override
   void dispose() {
     _controller.dispose();
+    _razorpay?.clear();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: const Color(0xFF0B1D3A), // Navy Blue background
       body: SafeArea(
         child: Column(
           children: [
@@ -196,6 +258,7 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                       'assets/images/appbar_line.png',
                       fit: BoxFit.cover,
                       width: double.infinity,
+                      color: const Color(0xFFFFD700).withOpacity(0.2), // Gold tint
                     ),
                   ),
                   
@@ -212,18 +275,22 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                             children: [
                               GestureDetector(
                                 onTap: () {
-                                  Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => MainScreen()), (route) => false);
+                                  Navigator.pushAndRemoveUntil(
+                                    context, 
+                                    FadePageRoute(page: MainScreen()), 
+                                    (route) => false
+                                  );
                                 },
                                 child: Container(
                                   width: 36,
                                   height: 36,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF5030E8).withOpacity(0.7),
+                                    color: const Color(0xFFFFD700).withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(18),
                                   ),
                                   child: const Icon(
                                     Icons.arrow_back,
-                                    color: Colors.white,
+                                    color: Color(0xFFFFD700),
                                     size: 18,
                                   ),
                                 ),
@@ -232,7 +299,7 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                               const Text(
                                 'Daily Winner',
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: Color(0xFFFFD700),
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -249,7 +316,11 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
             
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
+                      ),
+                    )
                   : SingleChildScrollView(
                       child: Column(
                         children: [
@@ -257,7 +328,7 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                             width: double.infinity,
                             height: 280,
                             decoration: const BoxDecoration(
-                              color: Color(0xFF1E1E1E),
+                              color: Color(0xFF0B1D3A),
                               image: DecorationImage(
                                 image: AssetImage('assets/images/winners.png'),
                                 fit: BoxFit.contain,
@@ -267,29 +338,27 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                           
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                            child: Column(
-                              children: [
-                                const Text(
-                                  'Today Winner',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
+                            child: const Text(
+                              'Today Winner',
+                              style: TextStyle(
+                                color: Color(0xFFFFD700),
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(vertical: 20),
-                            color: _winnerResponse?.data != null ? const Color(0xFF5030E8) : Colors.grey[800],
+                            color: _winnerResponse?.data != null 
+                              ? const Color(0xFF1E3A70) 
+                              : const Color(0xFF1E3A70).withOpacity(0.5),
                             child: Text(
                               _winnerResponse?.message ?? 'Loading...',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: Color(0xFFFFD700),
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -304,7 +373,7 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                                 : 'Check back later to see who won today\'s draw!',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Colors.grey[400],
+                                color: Colors.white54,
                                 fontSize: 16,
                                 height: 1.5,
                               ),
@@ -313,18 +382,13 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                           
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                            child: Column(
-                              children: [
-                                const Text(
-                                  'Past Winners',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                              ],
+                            child: const Text(
+                              'Past Winners',
+                              style: TextStyle(
+                                color: Color(0xFFFFD700),
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           
@@ -334,7 +398,7 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                               child: Text(
                                 'No past winners yet',
                                 style: TextStyle(
-                                  color: Colors.grey[400],
+                                  color: Colors.white54,
                                   fontSize: 16,
                                 ),
                                 textAlign: TextAlign.center,
@@ -361,12 +425,14 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                                     icon: const Icon(Icons.people_alt_outlined),
                                     label: const Text('Invite from Contacts'),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF5030E8),
-                                      foregroundColor: Colors.white,
+                                      backgroundColor: const Color(0xFFFFD700),
+                                      foregroundColor: const Color(0xFF0B1D3A),
                                       padding: const EdgeInsets.symmetric(vertical: 16),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
+                                      elevation: 3,
+                                      splashFactory: InkRipple.splashFactory,
                                     ),
                                   ),
                                 ),
@@ -376,16 +442,28 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                                 SizedBox(
                                   width: double.infinity,
                                   child: OutlinedButton.icon(
-                                    onPressed: () {},
-                                    icon: const Icon(Icons.favorite_border),
-                                    label: const Text('Donate 1 rupee'),
+                                    onPressed: _isDonationLoading ? null : _handleDonation,
+                                    icon: _isDonationLoading 
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
+                                          ),
+                                        )
+                                      : const Icon(Icons.favorite_border),
+                                    label: Text(_isDonationLoading ? 'Processing...' : 'Donate 1 rupee'),
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.white,
-                                      side: const BorderSide(color: Color(0xFF5030E8)),
+                                      foregroundColor: const Color(0xFFFFD700),
+                                      side: const BorderSide(color: Color(0xFFFFD700)),
                                       padding: const EdgeInsets.symmetric(vertical: 16),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
+                                      splashFactory: InkRipple.splashFactory,
+                                      elevation: 2,
+                                      animationDuration: const Duration(milliseconds: 300),
                                     ),
                                   ),
                                 ),
@@ -407,9 +485,12 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.transparent,
+        color: const Color(0xFF1E3A70),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+        border: Border.all(
+          color: const Color(0xFFFFD700).withOpacity(0.3),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
@@ -418,7 +499,7 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
             height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFFD8C4F4),
+              color: const Color(0xFFFFD700).withOpacity(0.2),
               image: DecorationImage(
                 image: AssetImage(imagePath),
                 fit: BoxFit.cover,
@@ -539,6 +620,159 @@ class _ShimmerTextState extends State<ShimmerText> with SingleTickerProviderStat
           ),
         );
       },
+    );
+  }
+}
+
+// Add a custom page route for smooth transitions
+class FadePageRoute extends PageRouteBuilder {
+  final Widget page;
+
+  FadePageRoute({required this.page})
+      : super(
+          pageBuilder: (context, animation, secondaryAnimation) => page,
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeInOut,
+                ),
+              ),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 500),
+        );
+}
+
+// Add this new widget before the FadePageRoute class
+class CircularCountdownTimer extends StatefulWidget {
+  final DateTime targetTime;
+  final VoidCallback? onCountdownComplete;
+
+  const CircularCountdownTimer({
+    Key? key, 
+    required this.targetTime, 
+    this.onCountdownComplete
+  }) : super(key: key);
+
+  @override
+  _CircularCountdownTimerState createState() => _CircularCountdownTimerState();
+}
+
+class _CircularCountdownTimerState extends State<CircularCountdownTimer> {
+  late Timer _timer;
+  Duration _remainingTime = Duration.zero;
+  bool _isCountdownComplete = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startCountdown();
+  }
+
+  void _startCountdown() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      final now = DateTime.now();
+      setState(() {
+        _remainingTime = widget.targetTime.difference(now);
+        
+        // Check if countdown is complete
+        if (_remainingTime.isNegative) {
+          _remainingTime = Duration.zero;
+          _isCountdownComplete = true;
+          timer.cancel(); // Stop the timer
+          
+          // Call the optional callback
+          widget.onCountdownComplete?.call();
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Ensure the target time is for today at 8 PM
+    final targetTime = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+      20, // 8 PM
+      0,
+      0
+    );
+
+    final totalSeconds = 24 * 60 * 60; // Total seconds in a day
+    final remainingSeconds = _remainingTime.inSeconds > totalSeconds 
+        ? totalSeconds 
+        : _remainingTime.inSeconds;
+    final progress = 1 - (remainingSeconds / totalSeconds);
+
+    return Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: const Color(0xFFFFD700).withOpacity(0.5),
+          width: 8,
+        ),
+        gradient: RadialGradient(
+          colors: [
+            const Color(0xFF1E3A70),
+            const Color(0xFF0B1D3A),
+          ],
+          stops: const [0.3, 1],
+        ),
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Circular progress indicator
+          CircularProgressIndicator(
+            value: progress,
+            backgroundColor: Colors.transparent,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              const Color(0xFFFFD700).withOpacity(0.5),
+            ),
+            strokeWidth: 8,
+          ),
+          // Timer text
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  _isCountdownComplete 
+                    ? 'Draw Time!' 
+                    : '${_remainingTime.inHours.toString().padLeft(2, '0')}:'
+                      '${(_remainingTime.inMinutes % 60).toString().padLeft(2, '0')}:'
+                      '${(_remainingTime.inSeconds % 60).toString().padLeft(2, '0')}',
+                  style: const TextStyle(
+                    color: Color(0xFFFFD700),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  _isCountdownComplete ? 'Completed' : 'Draw at 8 PM',
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 } 

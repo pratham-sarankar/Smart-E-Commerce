@@ -51,9 +51,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
-              primary: Color(0xFF5F67EE),
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
+              primary: Color(0xFFFFD700),
+              onPrimary: Color(0xFF0B1D3A),
+              onSurface: Color(0xFF0B1D3A),
             ),
           ),
           child: child!,
@@ -158,7 +158,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF19173A), Color(0xFF363079)],
+            colors: [Color(0xFF0B1D3A), Color(0xFF0B1D3A).withOpacity(0.9)],
             stops: [0.2, 0.8],
           ),
         ),
@@ -188,7 +188,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     height: 40,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Color(0xFF5F67EE).withOpacity(0.2),
+                      color: Color(0xFFFFD700).withOpacity(0.2),
                     ),
                   ),
                 ),
@@ -200,7 +200,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     height: 20,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Color(0xFF5F67EE).withOpacity(0.15),
+                      color: Color(0xFFFFD700).withOpacity(0.15),
                     ),
                   ),
                 ),
@@ -218,63 +218,120 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           Stack(
                             alignment: Alignment.center,
                             children: [
+                              // Outer glow effect
                               Container(
-                                width: 90,
-                                height: 90,
+                                width: 120,
+                                height: 120,
                                 decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
+                                  borderRadius: BorderRadius.circular(24),
+                                  gradient: RadialGradient(
+                                    colors: [
+                                      Color(0xFFFFD700).withOpacity(0.15),
+                                      Color(0xFFFFD700).withOpacity(0.05),
+                                      Colors.transparent,
+                                    ],
+                                    stops: [0.0, 0.6, 1.0],
+                                  ),
+                                ),
+                              ),
+                              // Middle gradient container
+                              Container(
+                                width: 110,
+                                height: 110,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(22),
                                   gradient: LinearGradient(
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                     colors: [
-                                      Color(0xFF5F67EE).withOpacity(0.2),
-                                      Color(0xFF5F67EE).withOpacity(0.05),
+                                      Color(0xFFFFD700).withOpacity(0.2),
+                                      Color(0xFFFFD700).withOpacity(0.05),
                                     ],
                                   ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Color(0xFFFFD700).withOpacity(0.2),
+                                      blurRadius: 15,
+                                      spreadRadius: 2,
+                                      offset: Offset(0, 4),
+                                    ),
+                                  ],
                                 ),
                               ),
+                              // Logo container
                               Hero(
-                                tag: 'logo',
-                                child: Container(
-                                  padding: EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.white,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.08),
-                                        blurRadius: 8,
-                                        spreadRadius: 1,
-                                        offset: Offset(0, 2),
+                                tag: 'login_logo',
+                                child: Material(
+                                  type: MaterialType.transparency,
+                                  child: Container(
+                                    width: 100,
+                                    height: 100,
+                                    padding: EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(20),
+                                      color: Colors.white,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 10,
+                                          spreadRadius: 0,
+                                          offset: Offset(0, 4),
+                                        ),
+                                        BoxShadow(
+                                          color: Colors.white,
+                                          blurRadius: 4,
+                                          spreadRadius: 2,
+                                          offset: Offset(0, -2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(16),
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            Colors.white,
+                                            Colors.white.withOpacity(0.9),
+                                          ],
+                                        ),
                                       ),
-                                    ],
-                                  ),
-                                  child: Image.network(
-                                    'https://cdn.builder.io/api/v1/image/assets/TEMP/2b11c06bdf765b35249d2275cc985e97f0b5fa2a',
-                                    width: 50,
-                                    height: 55,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Image.asset(
+                                          'assets/icon/icon.png',
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 20),
                           Hero(
-                            tag: 'title',
-                            child: Text(
-                              'MASTI LOTTIE',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF5F67EE),
-                                letterSpacing: 2.0,
-                                shadows: [
-                                  Shadow(
-                                    color: Colors.black.withOpacity(0.12),
-                                    offset: Offset(1, 2),
-                                    blurRadius: 1,
-                                  ),
-                                ],
+                            tag: 'login_title',
+                            child: Material(
+                              type: MaterialType.transparency,
+                              child: Text(
+                                'Lakhpati Club',
+                                style: TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFFFFD700),
+                                  letterSpacing: 1.5,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      offset: Offset(1, 2),
+                                      blurRadius: 2,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -287,8 +344,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
-                                  Color(0xFF5F67EE).withOpacity(0.08),
-                                  Color(0xFF5F67EE).withOpacity(0.02),
+                                  Color(0xFFFFD700).withOpacity(0.08),
+                                  Color(0xFFFFD700).withOpacity(0.02),
                                 ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
@@ -302,7 +359,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   style: TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFF19173A),
+                                    color: Color(0xFF0B1D3A),
                                   ),
                                 ),
                                 const SizedBox(height: 6),
@@ -310,7 +367,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   'By signing up you are agreeing our',
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: Colors.black54,
+                                    color: Color(0xFF0B1D3A),
                                   ),
                                 ),
                                 GestureDetector(
@@ -319,7 +376,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     'Term and privacy policy',
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color: Color(0xFF5F67EE),
+                                      color: Color(0xFFFFD700),
                                       fontWeight: FontWeight.bold,
                                       decoration: TextDecoration.underline,
                                     ),
@@ -351,13 +408,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 }
                                 return null;
                               },
-                              style: const TextStyle(fontSize: 15),
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Color(0xFF0B1D3A),
+                              ),
                               decoration: InputDecoration(
                                 hintText: 'Full Name',
-                                hintStyle: const TextStyle(fontSize: 15),
+                                hintStyle: TextStyle(fontSize: 15, color: Colors.black54),
                                 prefixIcon: Container(
                                   margin: EdgeInsets.only(left: 12, right: 8),
-                                  child: Icon(Icons.person_outline, color: Color(0xFF5F67EE), size: 22),
+                                  child: Icon(Icons.person_outline, color: Color(0xFFFFD700), size: 22),
                                 ),
                                 filled: true,
                                 fillColor: Colors.white,
@@ -372,7 +432,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: Color(0xFF5F67EE), width: 1.0),
+                                  borderSide: BorderSide(color: Color(0xFFFFD700), width: 1.0),
                                 ),
                                 errorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -407,13 +467,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 }
                                 return null;
                               },
-                              style: const TextStyle(fontSize: 15),
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Color(0xFF0B1D3A),
+                              ),
                               decoration: InputDecoration(
                                 hintText: 'Email Address',
-                                hintStyle: const TextStyle(fontSize: 15),
+                                hintStyle: TextStyle(fontSize: 15, color: Colors.black54),
                                 prefixIcon: Container(
                                   margin: EdgeInsets.only(left: 12, right: 8),
-                                  child: Icon(Icons.email_outlined, color: Color(0xFF5F67EE), size: 22),
+                                  child: Icon(Icons.email_outlined, color: Color(0xFFFFD700), size: 22),
                                 ),
                                 filled: true,
                                 fillColor: Colors.white,
@@ -428,7 +491,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: Color(0xFF5F67EE), width: 1.0),
+                                  borderSide: BorderSide(color: Color(0xFFFFD700), width: 1.0),
                                 ),
                                 errorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -462,13 +525,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 }
                                 return null;
                               },
-                              style: const TextStyle(fontSize: 15),
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Color(0xFF0B1D3A),
+                              ),
                               decoration: InputDecoration(
                                 hintText: 'Date of Birth (DD-MM-YYYY)',
-                                hintStyle: const TextStyle(fontSize: 15),
+                                hintStyle: TextStyle(fontSize: 15, color: Colors.black54),
                                 prefixIcon: Container(
                                   margin: EdgeInsets.only(left: 12, right: 8),
-                                  child: Icon(Icons.calendar_today_outlined, color: Color(0xFF5F67EE), size: 22),
+                                  child: Icon(Icons.calendar_today_outlined, color: Color(0xFFFFD700), size: 22),
                                 ),
                                 filled: true,
                                 fillColor: Colors.white,
@@ -518,14 +584,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 }
                                 return null;
                               },
-                              style: const TextStyle(fontSize: 15),
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Color(0xFF0B1D3A),
+                              ),
                               obscureText: _obscurePassword,
                               decoration: InputDecoration(
                                 hintText: 'Password',
-                                hintStyle: const TextStyle(fontSize: 15),
+                                hintStyle: TextStyle(fontSize: 15, color: Colors.black54),
                                 prefixIcon: Container(
                                   margin: EdgeInsets.only(left: 12, right: 8),
-                                  child: Icon(Icons.lock_outline, color: Color(0xFF5F67EE), size: 22),
+                                  child: Icon(Icons.lock_outline, color: Color(0xFFFFD700), size: 22),
                                 ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
@@ -587,14 +656,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 }
                                 return null;
                               },
-                              style: const TextStyle(fontSize: 15),
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Color(0xFF0B1D3A),
+                              ),
                               obscureText: _obscureConfirmPassword,
                               decoration: InputDecoration(
                                 hintText: 'Confirm Password',
-                                hintStyle: const TextStyle(fontSize: 15),
+                                hintStyle: TextStyle(fontSize: 15, color: Colors.black54),
                                 prefixIcon: Container(
                                   margin: EdgeInsets.only(left: 12, right: 8),
-                                  child: Icon(Icons.lock_outline, color: Color(0xFF5F67EE), size: 22),
+                                  child: Icon(Icons.lock_outline, color: Color(0xFFFFD700), size: 22),
                                 ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
@@ -640,7 +712,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Color(0xFF5F67EE).withOpacity(0.3),
+                                  color: Color(0xFFFFD700).withOpacity(0.3),
                                   blurRadius: 8,
                                   spreadRadius: 0,
                                   offset: Offset(0, 4),
@@ -650,7 +722,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             child: ElevatedButton(
                               onPressed: _register,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFF5F67EE),
+                                backgroundColor: Color(0xFFFFD700),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -662,14 +734,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     width: 24,
                                     height: 24,
                                     child: CircularProgressIndicator(
-                                      color: Colors.white,
+                                      color: Color(0xFF0B1D3A),
                                       strokeWidth: 2.5,
                                     ),
                                   )
                                 : const Text(
                                     'Register',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: Color(0xFF0B1D3A),
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -686,7 +758,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               const Text(
                                 'Already have an account? ',
                                 style: TextStyle(
-                                  color: Colors.black54,
+                                  color: Color(0xFF0B1D3A),
                                   fontSize: 15,
                                 ),
                               ),
@@ -697,7 +769,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 child: const Text(
                                   'Login',
                                   style: TextStyle(
-                                    color: Color(0xFF5F67EE),
+                                    color: Color(0xFFFFD700),
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
                                   ),
@@ -727,7 +799,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         color: Colors.white,
                         boxShadow: [
                           BoxShadow(
-                            color: Color(0xFF5F67EE).withOpacity(0.2),
+                            color: Color(0xFFFFD700).withOpacity(0.2),
                             blurRadius: 8,
                             spreadRadius: 1,
                             offset: Offset(0, 2),
@@ -737,7 +809,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       child: Center(
                         child: Icon(
                           Icons.arrow_back_ios_new_rounded,
-                          color: Color(0xFF5F67EE),
+                          color: Color(0xFFFFD700),
                           size: 16,
                         ),
                       ),
@@ -751,7 +823,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     color: Colors.black.withOpacity(0.3),
                     child: Center(
                       child: CircularProgressIndicator(
-                        color: Color(0xFF5F67EE),
+                        color: Color(0xFFFFD700),
                       ),
                     ),
                   ),
