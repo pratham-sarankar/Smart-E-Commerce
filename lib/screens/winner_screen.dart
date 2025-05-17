@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:smart_eommerce/screens/main_screen.dart';
+import 'package:smart_eommerce/models/winner_model.dart';
+import 'package:smart_eommerce/services/winner_service.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:share_plus/share_plus.dart';
 
 class WinnerScreen extends StatefulWidget {
   const WinnerScreen({Key? key}) : super(key: key);
@@ -11,6 +16,10 @@ class WinnerScreen extends StatefulWidget {
 class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
+  final WinnerService _winnerService = WinnerService();
+  WinnerResponse? _winnerResponse;
+  List<WinnerData> _pastWinners = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -21,6 +30,147 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
     )..repeat(reverse: true);
     
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
+    _fetchTodayWinner();
+    _fetchPastWinners();
+  }
+
+  Future<void> _fetchTodayWinner() async {
+    try {
+      final response = await _winnerService.getTodayWinner();
+      if (mounted) {
+        setState(() {
+          _winnerResponse = response;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _fetchPastWinners() async {
+    try {
+      final response = await _winnerService.getPastWinners();
+      if (mounted) {
+        setState(() {
+          _pastWinners = response.pastWinners;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading past winners: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleInviteFromContacts() async {
+    try {
+      // Request contacts permission
+      final status = await Permission.contacts.request();
+      
+      if (status.isGranted) {
+        // Get all contacts
+        final contacts = await FlutterContacts.getContacts(
+          withProperties: true,
+          withPhoto: true,
+        );
+        
+        if (!mounted) return;
+
+        // Show contact picker dialog
+        final selectedContact = await showDialog<Contact>(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1E1E1E),
+              title: const Text(
+                'Select Contact',
+                style: TextStyle(color: Colors.white),
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: contacts.length,
+                  itemBuilder: (context, index) {
+                    final contact = contacts[index];
+                    return ListTile(
+                      leading: contact.photo != null
+                          ? CircleAvatar(backgroundImage: MemoryImage(contact.photo!))
+                          : CircleAvatar(
+                              backgroundColor: const Color(0xFF5030E8),
+                              child: Text(
+                                contact.displayName.isNotEmpty 
+                                    ? contact.displayName[0].toUpperCase()
+                                    : '?',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                      title: Text(
+                        contact.displayName,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      onTap: () => Navigator.of(context).pop(contact),
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+
+        if (selectedContact != null) {
+          // Get the first phone number or email
+          String? contactInfo;
+          if (selectedContact.phones.isNotEmpty) {
+            contactInfo = selectedContact.phones.first.number;
+          } else if (selectedContact.emails.isNotEmpty) {
+            contactInfo = selectedContact.emails.first.address;
+          }
+
+          if (contactInfo != null) {
+            // Share the app with the selected contact
+            await Share.share(
+              'Join me on Lakhpati! Download the app and start winning big prizes!',
+              subject: 'Join Lakhpati App',
+            );
+          } else {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No contact information found')),
+            );
+          }
+        }
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Contacts permission denied')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
   }
 
   @override
@@ -98,133 +248,153 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
             ),
             
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      height: 280,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF1E1E1E),
-                        image: DecorationImage(
-                          image: AssetImage('assets/images/winners.png'),
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
-                    
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
                       child: Column(
                         children: [
-                          const Text(
-                            'Today Winner',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      color: const Color(0xFF5030E8),
-                      child: const Text(
-                        'Rajat Pradhan from Bhopal',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-                      child: Text(
-                        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Orci, interdum elit gravida enim ac eu tellus.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 16,
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
-                    
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Past Winners',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                      ),
-                    ),
-                    
-                    _buildPastWinnerItem('assets/images/avatar.png', 'Rajat Pradhan', 'From Bhopal', '₹100000.00'),
-                    _buildPastWinnerItem('assets/images/profile_pic.png', 'Rajat Pradhan', 'From Bhopal', '₹100000.00'),
-                    _buildPastWinnerItem('assets/images/avatar.png', 'Rajat Pradhan', 'From Bhopal', '₹100000.00'),
-                    
-                    const SizedBox(height: 24),
-                    
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-                      child: Column(
-                        children: [
-                          SizedBox(
+                          Container(
                             width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: () {},
-                              icon: const Icon(Icons.people_alt_outlined),
-                              label: const Text('Invite from Contacts'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF5030E8),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                            height: 280,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF1E1E1E),
+                              image: DecorationImage(
+                                image: AssetImage('assets/images/winners.png'),
+                                fit: BoxFit.contain,
                               ),
                             ),
                           ),
                           
-                          const SizedBox(height: 16),
-                          
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: () {},
-                              icon: const Icon(Icons.favorite_border),
-                              label: const Text('Donate 1 rupee'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                side: const BorderSide(color: Color(0xFF5030E8)),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  'Today Winner',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
+                              ],
+                            ),
+                          ),
+                          
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            color: _winnerResponse?.data != null ? const Color(0xFF5030E8) : Colors.grey[800],
+                            child: Text(
+                              _winnerResponse?.message ?? 'Loading...',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
                               ),
+                            ),
+                          ),
+                          
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                            child: Text(
+                              _winnerResponse?.data != null 
+                                ? 'Congratulations to our winner!'
+                                : 'Check back later to see who won today\'s draw!',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 16,
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                          
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  'Past Winners',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                            ),
+                          ),
+                          
+                          if (_pastWinners.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(20.0),
+                              child: Text(
+                                'No past winners yet',
+                                style: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontSize: 16,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            )
+                          else
+                            ..._pastWinners.map((winner) => _buildPastWinnerItem(
+                              'assets/images/avatar.png',
+                              winner.name,
+                              winner.location,
+                              winner.amount,
+                            )).toList(),
+                          
+                          const SizedBox(height: 24),
+                          
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                            child: Column(
+                              children: [
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: _handleInviteFromContacts,
+                                    icon: const Icon(Icons.people_alt_outlined),
+                                    label: const Text('Invite from Contacts'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF5030E8),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                
+                                const SizedBox(height: 16),
+                                
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () {},
+                                    icon: const Icon(Icons.favorite_border),
+                                    label: const Text('Donate 1 rupee'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      side: const BorderSide(color: Color(0xFF5030E8)),
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
             ),
           ],
         ),

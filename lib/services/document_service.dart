@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DocumentService {
-  final String baseUrl = 'https://4sr8mplp-3035.inc1.devtunnels.ms/api';
+  final String baseUrl = 'https://lakhpati.api.smartchainstudio.in/api';
 
   Future<String> _getAuthToken() async {
     final prefs = await SharedPreferences.getInstance();

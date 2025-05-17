@@ -132,60 +132,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         fit: BoxFit.cover,
                       ),
                     ),
-                    child: SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Row(
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                print('Back button pressed');
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Back button pressed')),
-                                );
-                                try {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const MainScreen()),
-                                  );
-                                  print('Navigation to MainScreen successful');
-                                } catch (e) {
-                                  print('Error during navigation: $e');
-                                }
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(25),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.arrow_back,
-                                  color: Color(0xFF5030E8),
-                                  size: 24,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-                            const Text(
-                              'Profile',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   ),
                   
                   // Wave overlay at the bottom
@@ -193,6 +139,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     'assets/images/appbar_line.png',
                     fit: BoxFit.fill,
                     width: double.infinity,
+                  ),
+
+                  // Content overlay
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0,vertical: 56.0),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 16),
+                            onPressed: () {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(builder: (context) => const MainScreen()),
+                                (route) => false,
+                              );
+                            },
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        const Text(
+                          'Profile',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -203,7 +187,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Column(
             children: [
               // Spacer for the app bar area
-              const SizedBox(height: 180),
+              const SizedBox(height: 100),
               
               // Avatar section
               Expanded(

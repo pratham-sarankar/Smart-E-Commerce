@@ -72,6 +72,37 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
     }
   }
 
+  Future<void> _pickIdFromGallery() async {
+    try {
+      final XFile? photo = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      
+      if (photo != null) {
+        setState(() {
+          _idImage = File(photo.path);
+          _isIdCaptured = true;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('ID photo selected successfully'),
+            backgroundColor: Color(0xFF5F67EE),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error accessing gallery: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Future<void> _takePassbookPhoto() async {
     try {
       final XFile? photo = await ImagePicker().pickImage(
@@ -98,6 +129,37 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error accessing camera: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _pickPassbookFromGallery() async {
+    try {
+      final XFile? photo = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      
+      if (photo != null) {
+        setState(() {
+          _bankPassbookImage = File(photo.path);
+          _isPassbookCaptured = true;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Passbook photo selected successfully'),
+            backgroundColor: Color(0xFF5F67EE),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error accessing gallery: ${e.toString()}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -585,38 +647,78 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
               ),
             ),
           SizedBox(height: 16),
-          InkWell(
-            onTap: onCapture,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                color: Color(0xFF5F67EE).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isCaptured ? Icons.refresh : Icons.camera_alt_outlined,
-                      color: Color(0xFF5F67EE),
-                      size: 18,
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: onCapture,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Color(0xFF5F67EE).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    SizedBox(width: 8),
-                    Text(
-                      isCaptured ? 'Retake Photo' : 'Take Photo',
-                      style: TextStyle(
-                        color: Color(0xFF5F67EE),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                    child: Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isCaptured ? Icons.refresh : Icons.camera_alt_outlined,
+                            color: Color(0xFF5F67EE),
+                            size: 18,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            isCaptured ? 'Retake' : 'Camera',
+                            style: TextStyle(
+                              color: Color(0xFF5F67EE),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+              SizedBox(width: 12),
+              Expanded(
+                child: InkWell(
+                  onTap: title == 'ID Document' ? _pickIdFromGallery : _pickPassbookFromGallery,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Color(0xFF5F67EE).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.photo_library_outlined,
+                            color: Color(0xFF5F67EE),
+                            size: 18,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Gallery',
+                            style: TextStyle(
+                              color: Color(0xFF5F67EE),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

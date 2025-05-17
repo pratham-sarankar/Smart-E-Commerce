@@ -59,6 +59,13 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
       }
     } catch (e) {
       print('Error loading user data: $e');
+      // Show error message to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading user data: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
   

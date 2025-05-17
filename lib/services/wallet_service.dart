@@ -8,6 +8,7 @@ class WalletService {
   Future<String> _getAuthToken() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
+    print('Token: $token');
     
     if (token == null) {
       throw Exception('Authentication token not found. Please login again.');
@@ -34,8 +35,21 @@ class WalletService {
         body: body != null ? jsonEncode(body) : null,
       );
 
+      // Check if response is HTML (error page)
+      if (response.headers['content-type']?.contains('text/html') ?? false) {
+        throw Exception('Server error: Received HTML response instead of JSON');
+      }
+
+      // Try to parse JSON response
+      Map<String, dynamic> responseData;
+      try {
+        responseData = jsonDecode(response.body);
+      } catch (e) {
+        throw Exception('Invalid server response format');
+      }
+
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        return responseData;
       } else if (response.statusCode == 401) {
         // Clear stored data on unauthorized access
         final prefs = await SharedPreferences.getInstance();
@@ -45,9 +59,12 @@ class WalletService {
         await prefs.setBool('is_logged_in', false);
         throw Exception('Unauthorized: Please login again');
       } else {
-        throw Exception('Request failed: ${response.body}');
+        throw Exception(responseData['message'] ?? 'Request failed: ${response.statusCode}');
       }
     } catch (e) {
+      if (e is FormatException) {
+        throw Exception('Invalid response format from server');
+      }
       throw Exception('Error making request: $e');
     }
   }
@@ -91,10 +108,93 @@ class WalletService {
     );
   }
 
-  Future<Map<String, dynamic>> verifyWalletTopup(double amount) async {
-    return _makeAuthenticatedRequest(
-      'verify-wallet-topup',
-      {'amount': amount},
-    );
+  Future<Map<String, dynamic>> verifyWalletTopup({
+    required String paymentId,
+    required String orderId,
+    required String signature,
+    required int amount,
+  }) async {
+    try {
+      if (paymentId.isEmpty || orderId.isEmpty || signature.isEmpty) {
+        throw Exception('Invalid payment details');
+      }
+
+      final requestBody = {
+        'razorpay_payment_id': paymentId,
+        'razorpay_order_id': orderId,
+        'razorpay_signature': signature,
+        'amount': amount,
+      };
+
+      final token = await _getAuthToken();
+
+      print('Request Body: $requestBody');
+      
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      final response = await http.post(
+        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/wallet/verify-wallet-topup'),
+        headers: headers,
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['success'] == true) {
+          return responseData;
+        } else {
+          throw Exception(responseData['message'] ?? 'Payment verification failed');
+        }
+      } else if (response.statusCode == 401) {
+        // Clear stored data on unauthorized access
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('token');
+        await prefs.remove('user_id');
+        await prefs.remove('user_email');
+        await prefs.setBool('is_logged_in', false);
+        throw Exception('Unauthorized: Please login again');
+      } else {
+        throw Exception('Failed to verify payment: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Verification error: $e');
+      throw Exception('Failed to verify payment: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> requestWithdrawal(double amount) async {
+    try {
+      final token = await _getAuthToken();
+      
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      final response = await http.post(
+        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/user/withdrawl-request'),
+        headers: headers,
+        body: jsonEncode({'amount': amount}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else if (response.statusCode == 401) {
+        // Clear stored data on unauthorized access
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('token');
+        await prefs.remove('user_id');
+        await prefs.remove('user_email');
+        await prefs.setBool('is_logged_in', false);
+        throw Exception('Unauthorized: Please login again');
+      } else {
+        throw Exception('Request failed: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Error making withdrawal request: $e');
+    }
   }
 } 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_eommerce/screens/main_screen.dart';
 import 'package:smart_eommerce/services/user_service.dart';
 import 'package:smart_eommerce/models/user_model.dart';
 import 'package:share_plus/share_plus.dart';
@@ -15,6 +16,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   UserModel? _userProfile;
   bool _isLoading = true;
   String _errorMessage = '';
+  bool _isAutoDeductEnabled = false;
 
   @override
   void initState() {
@@ -34,6 +36,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (result['success']) {
         setState(() {
           _userProfile = result['user'];
+          _isAutoDeductEnabled = _userProfile?.wallet?.autoDeduct ?? false;
           _isLoading = false;
         });
       } else {
@@ -47,6 +50,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _errorMessage = 'Failed to load profile data';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _toggleAutoDeduct(bool value) async {
+    try {
+      final result = await _userService.toggleAutoDeduct(value);
+      if (result['success']) {
+        setState(() {
+          _isAutoDeductEnabled = value;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('An error occurred while updating settings'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -65,115 +99,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   // App bar with background image
                   Container(
-                    height: 170,
+                    height: 160,
                     decoration: const BoxDecoration(
                       image: DecorationImage(
                         image: AssetImage('assets/images/app_bar.png'),
                         fit: BoxFit.cover,
-                      ),
-                    ),
-                    child: SafeArea(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Top bar with title and search
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(20.0, 10.0, 20.0, 10.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text(
-                                  'Settings',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Container(
-                                  height: 36,
-                                  width: 36,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.15),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: IconButton(
-                                    icon: const Icon(Icons.search, color: Colors.white, size: 20),
-                                    onPressed: () {},
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          
-                          // Avatar and user info section
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(20.0, 0.0, 20.0, 10.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2),
-                                    image: const DecorationImage(
-                                      image: AssetImage('assets/images/profile_pic.png'),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        _userProfile?.fullname ?? 'Loading...',
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                          letterSpacing: 0.3,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        _userProfile?.email ?? 'Loading...',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.white.withOpacity(0.85),
-                                          letterSpacing: 0.2,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  height: 36,
-                                  width: 36,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.15),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: IconButton(
-                                    icon: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 20),
-                                    onPressed: () {},
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                   ),
@@ -187,6 +117,81 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       'assets/images/appbar_line.png',
                       fit: BoxFit.fill,
                       width: double.infinity,
+                    ),
+                  ),
+
+                  // Content overlay
+                  SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 46.0),
+                      child: Row(
+                        children: [
+                          // Back button
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 16),
+                              onPressed: () {
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const MainScreen()),
+                                  (route) => false,
+                                );
+                              },
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Avatar and user info
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                              image: const DecorationImage(
+                                image: AssetImage('assets/images/profile_pic.png'),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _userProfile?.fullname ?? 'Loading...',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                    letterSpacing: 0.3,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _userProfile?.email ?? 'Loading...',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white.withOpacity(0.85),
+                                    letterSpacing: 0.2,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -229,36 +234,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           onTap: () {},
                         ),
                         
-                        SettingsItem(
-                          icon: Icons.notifications,
-                          iconColor: const Color(0xFF5030E8),
-                          title: 'Notifications & Chat',
-                          subtitle: 'Chat and notifications settings',
-                          onTap: () {},
-                        ),
-                        
-                        SettingsItem(
-                          icon: Icons.privacy_tip,
-                          iconColor: const Color(0xFF5030E8),
-                          title: 'Privacy & Permissions',
-                          subtitle: 'Contact, My Album and Block Contact',
-                          onTap: () {},
-                        ),
-                        
-                        SettingsItem(
-                          icon: Icons.storage,
-                          iconColor: const Color(0xFF5030E8),
-                          title: 'Data & Storage',
-                          subtitle: 'Data preferences and storage settings',
-                          onTap: () {},
-                        ),
-                        
-                        SettingsItem(
-                          icon: Icons.lock,
-                          iconColor: const Color(0xFF5030E8),
-                          title: 'Password & Account',
-                          subtitle: 'Manage your Account settings',
-                          onTap: () {},
+                        // Add Auto-deduct toggle
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6.0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E1E1E),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF5030E8).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(Icons.auto_awesome, color: Color(0xFF5030E8), size: 22),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text(
+                                        'Auto-deduct',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _isAutoDeductEnabled ? 'Enabled' : 'Disabled',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.white.withOpacity(0.7),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Switch(
+                                  value: _isAutoDeductEnabled,
+                                  onChanged: _toggleAutoDeduct,
+                                  activeColor: const Color(0xFF5030E8),
+                                  activeTrackColor: const Color(0xFF5030E8).withOpacity(0.5),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                         
                         const Padding(
@@ -271,14 +300,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               color: Colors.white,
                             ),
                           ),
-                        ),
-                        
-                        SettingsItem(
-                          icon: Icons.help,
-                          iconColor: const Color(0xFF5030E8),
-                          title: 'Help',
-                          subtitle: 'Data preferences and storage settings',
-                          onTap: () {},
                         ),
                         
                         SettingsItem(

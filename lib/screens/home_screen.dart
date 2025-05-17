@@ -4,6 +4,11 @@ import 'package:smart_eommerce/widgets/game_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_eommerce/services/user_service.dart';
 import 'package:smart_eommerce/models/user_model.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:smart_eommerce/services/wallet_service.dart';
+import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -17,13 +22,75 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   late TabController _tabController;
   String _userName = 'User';
   final UserService _userService = UserService();
+  final WalletService _walletService = WalletService();
   UserModel? _userProfile;
+  Razorpay? _razorpay;
+  bool _isLoading = false;
+  double _availableBalance = 0.0;
+  double _totalWinnings = 0.0;
+  final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadUserProfile();
+    _loadWalletData();
+    _initializeRazorpay();
+  }
+
+  void _initializeRazorpay() {
+    _razorpay = Razorpay();
+    _razorpay!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay!.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay!.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Thank you for your donation!')),
+    );
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Payment failed: ${response.message}')),
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('External wallet selected: ${response.walletName}')),
+    );
+  }
+
+  Future<void> _handleDonation() async {
+    try {
+      setState(() => _isLoading = true);
+      
+      // Initialize Razorpay payment
+      var options = {
+        'key': 'rzp_test_NMHJrIP0HgARfE',
+        'amount': 100, // Amount in smallest currency unit (paise)
+        'name': 'Smart E-commerce',
+        'description': '1 Rupee Donation',
+        'prefill': {
+          'contact': '',
+          'email': '',
+        },
+        'external': {
+          'wallets': ['paytm']
+        }
+      };
+
+      _razorpay!.open(options);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _loadUserProfile() async {
@@ -41,8 +108,44 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
   }
 
+  Future<void> _loadWalletData() async {
+    try {
+      final walletData = await _walletService.getMyWallet();
+      if (walletData['success'] == true) {
+        setState(() {
+          final balance = walletData['wallet']?['balance'];
+          _availableBalance = balance is num ? balance.toDouble() : 0.0;
+        });
+      }
+      
+      // Fetch total winning amount
+      final response = await http.get(
+        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/user/total-wining'),
+        headers: {
+          'Authorization': 'Bearer ${await _getAuthToken()}',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          _totalWinnings = (data['totalWinningAmount'] as num).toDouble();
+        });
+      }
+    } catch (e) {
+      print('Error loading wallet data: $e');
+    }
+  }
+
+  Future<String> _getAuthToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token') ?? '';
+  }
+
   @override
   void dispose() {
+    _razorpay?.clear();
     _tabController.dispose();
     super.dispose();
   }
@@ -122,13 +225,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         children: [
           // Background wave image
           Positioned.fill(
-            top: -100,
             child: Opacity(
               opacity: 0.4,
               child: Image.asset(
                 'assets/images/home_wave.png',
-                fit: BoxFit.contain,
-                height: 20,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
               ),
             ),
           ),
@@ -188,7 +291,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                 children: [
                                   // Available Balance Tab
                                   BalanceDisplay(
-                                    amount: '₹41,520.49',
+                                    amount: _currencyFormat.format(_availableBalance),
                                     isVisible: _showBalance,
                                     onToggle: () {
                                       setState(() {
@@ -198,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                   ),
                                   // Total Winning Price Tab
                                   BalanceDisplay(
-                                    amount: '₹8,325.75',
+                                    amount: _currencyFormat.format(_totalWinnings),
                                     isVisible: _showBalance,
                                     onToggle: () {
                                       setState(() {
@@ -215,425 +318,98 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       
                       const SizedBox(height: 24),
                       
+                      // Total Withdrawals Section
+                      const Text(
+                        'Total Withdrawals',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Total Withdrawals Card
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade900,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.deepPurple.shade300,
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Total Amount Withdrawn',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Text(
+                                  _currencyFormat.format(_totalWinnings),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'This is the total amount you have withdrawn from your winnings',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
                       // Donate Button
                       SizedBox(
                         width: double.infinity,
                         height: 48,
                         child: ElevatedButton(
-                          onPressed: () {},
+                          onPressed: _isLoading ? null : _handleDonation,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepPurple,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          child: const Text(
-                            'Donate 1 Rupee',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Play Game Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.games),
-                          label: const Text("PLAY GAME"),
-                          onPressed: () {
-                            // Show game card popup
-                            GameCardDialog.show(
-                              context,
-                              onPlay: () {
-                                // Handle game start logic
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Game started!')),
-                                );
-                              },
-                              title: 'Money Bag Challenge',
-                              description: 'Complete tasks and earn real money!',
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.amber,
-                            foregroundColor: Colors.black,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : const Text(
+                                  'Donate 1 Rupee',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                         ),
                       ),
                       
                       const SizedBox(height: 24),
-                    ],
-                  ),
-                ),
-                
-                // Full-width containers
-                // Payment methods section
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade900,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                    ),
-                  ),
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Choose Payment',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () {},
-                            icon: Icon(
-                              Icons.add,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                            label: Text(
-                              'Add Money',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: Colors.grey.shade700),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      // Payment cards
-                      PaymentMethodCard(
-                        cardType: 'mastercard',
-                        lastFourDigits: '1234',
-                      ),
-                      const SizedBox(height: 8),
-                      PaymentMethodCard(
-                        cardType: 'visa',
-                        lastFourDigits: '4887',
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: OutlinedButton.icon(
-                          onPressed: () {},
-                          icon: Icon(Icons.add_circle_outline, color: Colors.white, size: 16),
-                          label: Text(
-                            'Add new payment method',
-                            style: TextStyle(color: Colors.white, fontSize: 14),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.grey.shade800),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Content below payment section
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade900,
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(16),
-                      bottomRight: Radius.circular(16),
-                    ),
-                  ),
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Withdrawal section
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Withdrawal',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                           
-                            },
-                            icon: Icon(
-                              Icons.settings,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                            label: Text(
-                              'Manage',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: Colors.grey.shade700),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      // Withdrawal options
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.deepPurple, width: 2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'UPI',
-                                    style: TextStyle(color: Colors.grey, fontSize: 12),
-                                  ),
-                                  Text(
-                                    'Wave Simple',
-                                    style: TextStyle(color: Colors.white, fontSize: 14),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade800),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Credit',
-                                    style: TextStyle(color: Colors.grey, fontSize: 12),
-                                  ),
-                                  Text(
-                                    'Wave Fluro',
-                                    style: TextStyle(color: Colors.white, fontSize: 14),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Weekly withdrawal amount
-                      Row(
-                        children: [
-                          Icon(Icons.history, color: Colors.grey.shade400, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            '₹328.88',
-                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'this week',
-                            style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      
-                      // Main savings
-                      Row(
-                        children: [
-                          Icon(Icons.savings_outlined, color: Colors.grey.shade400, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Main savings',
-                            style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      // Options button
-                      SizedBox(
-                        height: 36,
-                        child: OutlinedButton.icon(
-                          onPressed: () {},
-                          icon: Icon(Icons.more_horiz, color: Colors.white, size: 16),
-                          label: Text(
-                            'Options',
-                            style: TextStyle(color: Colors.white, fontSize: 14),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.grey.shade800),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ),
-                      
-                      // Credit card image
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Container(
-                            height: 40,
-                            width: 60,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(6),
-                              color: Colors.grey.shade900,
-                            ),
-                            child: Center(
-                              child: Icon(Icons.credit_card, color: Colors.white70),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      
-                      // Transactions section
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Translations',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () {},
-                            icon: Icon(
-                              Icons.settings,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                            label: Text(
-                              'Manage',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: Colors.grey.shade700),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      // Transaction list
-                      TransactionItem(
-                        title: 'Withdrawal to',
-                        subtitle: 'Account',
-                        amount: '₹100.00',
-                      ),
-                      const SizedBox(height: 12),
-                      TransactionItem(
-                        title: 'Transfer to',
-                        subtitle: 'Wallet',
-                        amount: '₹400.00',
-                      ),
-                      const SizedBox(height: 12),
-                      TransactionItem(
-                        title: 'Withdrawal to',
-                        subtitle: 'Account',
-                        amount: '₹100.00',
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Show all button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 40,
-                        child: OutlinedButton.icon(
-                          onPressed: () {},
-                          icon: Icon(Icons.keyboard_arrow_down, color: Colors.white),
-                          label: Text(
-                            'Show All',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.grey.shade800),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      
-                      // Manage homepage
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: OutlinedButton.icon(
-                          onPressed: () {},
-                          icon: Icon(Icons.sync, color: Colors.white),
-                          label: Text(
-                            'Manage Homepage',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.grey.shade800),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -783,32 +559,33 @@ class BalanceDisplay extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Always show the actual price
+          // Show either the actual price or asterisks based on isVisible
           Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                wholePart,
+                isVisible ? wholePart : '****',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              Text(
-                '.$decimalPart',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+              if (isVisible)
+                Text(
+                  '.$decimalPart',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
             ],
           ),
-          const SizedBox(height: 8), // Reduced space
-          // Eye icon with "Show" text
+          const SizedBox(height: 8),
+          // Eye icon with "Show/Hide" text
           OutlinedButton.icon(
             onPressed: onToggle,
             icon: Icon(
@@ -817,7 +594,7 @@ class BalanceDisplay extends StatelessWidget {
               size: 16,
             ),
             label: Text(
-              'Show',
+              isVisible ? 'Hide' : 'Show',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 12,

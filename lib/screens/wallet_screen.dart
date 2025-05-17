@@ -16,6 +16,7 @@ class _WalletScreenState extends State<WalletScreen> {
   Razorpay? _razorpay;
   bool _isLoading = false;
   double _balance = 0.0;
+  int? _currentPaymentAmount;
   final List<Map<String, dynamic>> _transactions = [];
   final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
 
@@ -38,17 +39,22 @@ class _WalletScreenState extends State<WalletScreen> {
       final walletData = await _walletService.getMyWallet();
       if (walletData['success'] == true) {
         setState(() {
-          _balance = (walletData['wallet']['balance'] ?? 0).toDouble();
-          // Add transactions from the wallet data if available
-          if (walletData['wallet']['transactions'] != null) {
-            _transactions.clear();
-            _transactions.addAll(
-              (walletData['wallet']['transactions'] as List).map((t) => {
-                'amount': t['amount'] ?? 0.0,
-                'type': t['type'] ?? 'Deposit',
-                'created_at': t['createdAt'] ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
-              }).toList(),
-            );
+          // Safely convert balance to double
+          final balance = walletData['wallet']?['balance'];
+          _balance = balance is num ? balance.toDouble() : 0.0;
+          
+          // Clear existing transactions
+          _transactions.clear();
+          
+          // Add transactions from the API response
+          final transactions = walletData['wallet']?['transactions'] as List<dynamic>?;
+          if (transactions != null) {
+            _transactions.addAll(transactions.map((t) => {
+              'amount': t['amount']?.toDouble() ?? 0.0,
+              'type': t['type'] ?? '',
+              'status': t['status'] ?? '',
+              'created_at': DateTime.parse(t['createdAt'] ?? DateTime.now().toIso8601String()).millisecondsSinceEpoch ~/ 1000,
+            }).toList());
           }
         });
       }
@@ -74,19 +80,45 @@ class _WalletScreenState extends State<WalletScreen> {
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
     try {
+      if (response.paymentId == null || response.orderId == null || response.signature == null) {
+        throw Exception('Invalid payment response from Razorpay');
+      }
+
+      if (_currentPaymentAmount == null) {
+        throw Exception('Payment amount not found');
+      }
+
+      setState(() => _isLoading = true);
+      
       // Verify the payment with your backend
-      final verifyResponse = await _walletService.verifyWalletTopup(double.parse(response.paymentId!));
+      final verifyResponse = await _walletService.verifyWalletTopup(
+        paymentId: response.paymentId!,
+        orderId: response.orderId!,
+        signature: response.signature!,
+        amount: _currentPaymentAmount!,
+      );
       
       // Reload wallet data to get updated balance and transactions
       await _loadWalletData();
       
+      if (!mounted) return;
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment successful!')),
+        SnackBar(content: Text(verifyResponse['message'] ?? 'Payment successful!')),
       );
     } catch (e) {
+      if (!mounted) return;
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error verifying payment: ${e.toString()}')),
+        SnackBar(
+          content: Text('Error verifying payment: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -100,23 +132,6 @@ class _WalletScreenState extends State<WalletScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('External wallet selected: ${response.walletName}')),
     );
-  }
-
-  void _addTransaction(double amount, String type) {
-    setState(() {
-      _transactions.insert(0, {
-        'amount': amount,
-        'type': type,
-        'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      });
-      
-      // Update balance
-      if (type.toLowerCase().contains('deposit')) {
-        _balance += amount;
-      } else if (type.toLowerCase().contains('withdrawal')) {
-        _balance -= amount;
-      }
-    });
   }
 
   void _handleAuthError(BuildContext context) {
@@ -176,6 +191,40 @@ class _WalletScreenState extends State<WalletScreen> {
                 return;
               }
 
+              // Show confirmation dialog
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: const Color(0xFF2A2A2A),
+                  title: const Text(
+                    'Confirm Deposit',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  content: Text(
+                    'You are about to deposit ${_currencyFormat.format(amount)}. Do you want to continue?',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF5030E8),
+                      ),
+                      child: const Text('Confirm'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmed != true) return;
+
               Navigator.pop(context);
               setState(() => _isLoading = true);
 
@@ -183,13 +232,16 @@ class _WalletScreenState extends State<WalletScreen> {
                 // First initiate the topup to get order details
                 final topupResponse = await _walletService.topupWallet(amount);
                 
+                // Store the amount directly without multiplying by 100
+                _currentPaymentAmount = amount.toInt();
+                
                 // Initialize Razorpay only when needed
                 _initializeRazorpay();
                 
                 // Initialize Razorpay payment
                 var options = {
                   'key': 'rzp_test_NMHJrIP0HgARfE',
-                  'amount': (amount * 100).toInt(), // Amount in smallest currency unit
+                  'amount': _currentPaymentAmount!, // Amount in smallest currency unit
                   'name': 'Smart E-commerce',
                   'description': 'Wallet Top-up',
                   'order_id': topupResponse['id'],
@@ -220,6 +272,140 @@ class _WalletScreenState extends State<WalletScreen> {
               backgroundColor: const Color(0xFF5030E8),
             ),
             child: const Text('Deposit'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleWithdraw() async {
+    final TextEditingController amountController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2A2A2A),
+        title: const Text(
+          'Withdraw Amount',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: TextField(
+          controller: amountController,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: 'Enter amount in INR',
+            hintStyle: TextStyle(color: Colors.grey),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.grey),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Color(0xFF5030E8)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (amountController.text.isEmpty) return;
+              
+              final amount = double.tryParse(amountController.text);
+              if (amount == null || amount <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a valid amount')),
+                );
+                return;
+              }
+
+              if (amount > _balance) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Insufficient balance')),
+                );
+                return;
+              }
+
+              // Show confirmation dialog
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: const Color(0xFF2A2A2A),
+                  title: const Text(
+                    'Confirm Withdrawal',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  content: Text(
+                    'You are about to withdraw ${_currencyFormat.format(amount)}. Do you want to continue?',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF5030E8),
+                      ),
+                      child: const Text('Confirm'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmed != true) return;
+
+              setState(() => _isLoading = true);
+
+              try {
+                final response = await _walletService.requestWithdrawal(amount);
+                
+                if (!mounted) return;
+                
+                // Show success message before closing dialog
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(response['message'] ?? 'Withdrawal request submitted')),
+                );
+                
+                // Close dialog after showing message
+                Navigator.pop(context);
+                
+                // Reload wallet data to get updated balance
+                await _loadWalletData();
+              } catch (e) {
+                if (!mounted) return;
+                
+                if (e.toString().contains('Unauthorized') || 
+                    e.toString().contains('Authentication token not found')) {
+                  _handleAuthError(context);
+                } else {
+                  // Show error message before closing dialog
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: ${e.toString()}')),
+                  );
+                }
+                // Close dialog after showing error
+                Navigator.pop(context);
+              } finally {
+                if (mounted) {
+                  setState(() => _isLoading = false);
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF5030E8),
+            ),
+            child: const Text('Withdraw'),
           ),
         ],
       ),
@@ -257,7 +443,6 @@ class _WalletScreenState extends State<WalletScreen> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 0.0),
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               // Back button with title next to it
                               Row(
@@ -291,25 +476,6 @@ class _WalletScreenState extends State<WalletScreen> {
                                     ),
                                   ),
                                 ],
-                              ),
-                              
-                              // Scan button - with transparent background
-                              GestureDetector(
-                                onTap: () {
-                                  // Handle QR scanner tap
-                                },
-                                child: Container(
-                                  width: 50,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF5030E8).withOpacity(0.7),
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  child: const Icon(
-                                    Icons.qr_code_scanner,
-                                    color: Colors.white,
-                                  ),
-                                ),
                               ),
                             ],
                           ),
@@ -391,7 +557,7 @@ class _WalletScreenState extends State<WalletScreen> {
                               // Withdraw button
                               Expanded(
                                 child: OutlinedButton(
-                                  onPressed: () {},
+                                  onPressed: _isLoading ? null : _handleWithdraw,
                                   style: OutlinedButton.styleFrom(
                                     side: const BorderSide(color: Colors.grey, width: 1.0),
                                     foregroundColor: Colors.white,
@@ -452,7 +618,8 @@ class _WalletScreenState extends State<WalletScreen> {
                                       itemBuilder: (context, index) {
                                         final transaction = _transactions[index];
                                         final amount = (transaction['amount'] ?? 0.0).toDouble();
-                                        final type = transaction['type'] ?? 'Deposit';
+                                        final type = transaction['type'] ?? '';
+                                        final status = transaction['status'] ?? '';
                                         final date = DateTime.fromMillisecondsSinceEpoch(
                                           (transaction['created_at'] ?? 0) * 1000,
                                         );
@@ -461,7 +628,8 @@ class _WalletScreenState extends State<WalletScreen> {
                                           type: type,
                                           account: DateFormat('MMM dd, yyyy').format(date),
                                           amount: _currencyFormat.format(amount),
-                                          isDeposit: type.toLowerCase().contains('deposit'),
+                                          isDeposit: type.toLowerCase() == 'credit',
+                                          status: status,
                                         );
                                       },
                                     ),
@@ -493,6 +661,7 @@ class TransactionItem extends StatelessWidget {
   final String account;
   final String amount;
   final bool isDeposit;
+  final String status;
 
   const TransactionItem({
     Key? key,
@@ -500,6 +669,7 @@ class TransactionItem extends StatelessWidget {
     required this.account,
     required this.amount,
     this.isDeposit = false,
+    required this.status,
   }) : super(key: key);
 
   @override
@@ -521,12 +691,31 @@ class TransactionItem extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                type,
-                style: TextStyle(
-                  color: isDeposit ? Colors.green : Colors.grey,
-                  fontSize: 12,
-                ),
+              Row(
+                children: [
+                  Text(
+                    type,
+                    style: TextStyle(
+                      color: isDeposit ? Colors.green : Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: status == 'Completed' ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        color: status == 'Completed' ? Colors.green : Colors.orange,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 2),
               Text(

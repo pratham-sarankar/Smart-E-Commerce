@@ -54,6 +54,53 @@ class UserService {
     }
   }
   
+  // Toggle auto-deduct setting
+  Future<Map<String, dynamic>> toggleAutoDeduct(bool enable) async {
+    try {
+      final token = await _getToken();
+      
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Authentication token not found. Please login again.',
+        };
+      }
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl/user/auto-deduct-on'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'autoDeduct': enable,
+        }),
+      );
+      
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        // Update the user profile after successful toggle
+        await getUserProfile();
+        
+        return {
+          'success': true,
+          'message': enable ? 'Auto-deduct enabled' : 'Auto-deduct disabled',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to update auto-deduct setting',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'An error occurred. Please check your connection and try again.',
+      };
+    }
+  }
+  
   // Logout user
   Future<Map<String, dynamic>> logout() async {
     try {

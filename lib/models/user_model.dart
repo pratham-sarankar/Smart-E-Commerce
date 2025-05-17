@@ -5,6 +5,7 @@ class UserModel {
   final String? fullname;
   final String? dob;
   final String? isVerified;
+  final WalletModel? wallet;
 
   UserModel({
     required this.id,
@@ -13,6 +14,7 @@ class UserModel {
     this.fullname,
     this.dob,
     this.isVerified,
+    this.wallet,
   });
 
   // Create a user model from JSON data
@@ -26,6 +28,7 @@ class UserModel {
         fullname: json['fullname'],
         dob: json['dob'],
         isVerified: json['isVerified'],
+        wallet: json['wallet'] != null ? WalletModel.fromJson(json['wallet']) : null,
       );
     } catch (e) {
       print('Error creating UserModel: $e');
@@ -48,6 +51,7 @@ class UserModel {
         email: data['user']['email'] ?? '',
         token: data['token'] ?? '',
         isVerified: 'true', // Since response indicates user is created and verified
+        wallet: data['user']['wallet'] != null ? WalletModel.fromJson(data['user']['wallet']) : null,
       );
     } catch (e) {
       print('Error creating UserModel from register response: $e');
@@ -70,11 +74,56 @@ class UserModel {
       'fullname': fullname,
       'dob': dob,
       'isVerified': isVerified,
+      'wallet': wallet?.toJson(),
     };
   }
   
   @override
   String toString() {
     return 'UserModel(id: $id, email: $email, fullname: $fullname, dob: $dob, isVerified: $isVerified, token: ${token.substring(0, 10)}...)';
+  }
+}
+
+class WalletModel {
+  final String id;
+  final String user;
+  final double balance;
+  final bool autoDeduct;
+  final List<dynamic> transactions;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  WalletModel({
+    required this.id,
+    required this.user,
+    required this.balance,
+    required this.autoDeduct,
+    required this.transactions,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory WalletModel.fromJson(Map<String, dynamic> json) {
+    return WalletModel(
+      id: json['_id'] ?? '',
+      user: json['user'] ?? '',
+      balance: (json['balance'] ?? 0).toDouble(),
+      autoDeduct: json['autoDeduct'] ?? false,
+      transactions: json['transactions'] ?? [],
+      createdAt: DateTime.parse(json['createdAt']),
+      updatedAt: DateTime.parse(json['updatedAt']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user': user,
+      'balance': balance,
+      'autoDeduct': autoDeduct,
+      'transactions': transactions,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
   }
 } 

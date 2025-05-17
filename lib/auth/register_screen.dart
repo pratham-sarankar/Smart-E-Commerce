@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:smart_eommerce/services/auth_service.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -90,6 +92,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         if (result['success'] == true) {
           print('Registration successful');
+          
+          // Save user data to SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user', jsonEncode({
+            'email': _emailController.text.trim(),
+            'fullname': _fullnameController.text.trim(),
+            'dob': _dobController.text,
+          }));
+          
           // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
