@@ -4,6 +4,7 @@ import 'package:smart_eommerce/screens/home_screen.dart';
 import '../services/wallet_service.dart';
 import 'package:intl/intl.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'transaction_history_screen.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({Key? key}) : super(key: key);
@@ -43,19 +44,30 @@ class _WalletScreenState extends State<WalletScreen> {
           // Safely convert balance to double
           final balance = walletData['wallet']?['balance'];
           _balance = balance is num ? balance.toDouble() : 0.0;
-          
+        });
+      }
+
+      // Fetch transactions separately
+      final transactionsData = await _walletService.getAllTransactions();
+      if (transactionsData['success'] == true) {
+        setState(() {
           // Clear existing transactions
           _transactions.clear();
           
           // Add transactions from the API response
-          final transactions = walletData['wallet']?['transactions'] as List<dynamic>?;
+          final transactions = transactionsData['transactions'] as List<dynamic>?;
           if (transactions != null) {
-            _transactions.addAll(transactions.map((t) => {
+            // Sort transactions by date in descending order (latest first)
+            final sortedTransactions = transactions.map((t) => {
               'amount': t['amount']?.toDouble() ?? 0.0,
               'type': t['type'] ?? '',
               'status': t['status'] ?? '',
               'created_at': DateTime.parse(t['createdAt'] ?? DateTime.now().toIso8601String()).millisecondsSinceEpoch ~/ 1000,
-            }).toList());
+            }).toList()
+              ..sort((a, b) => (b['created_at'] as int).compareTo(a['created_at'] as int));
+
+            // Take only the top 3 transactions
+            _transactions.addAll(sortedTransactions.take(3));
           }
         });
       }
@@ -864,7 +876,14 @@ class _WalletScreenState extends State<WalletScreen> {
                                 ),
                               ),
                               TextButton.icon(
-                                onPressed: null, // Optional: Add functionality if needed
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const TransactionHistoryScreen(),
+                                    ),
+                                  );
+                                },
                                 icon: const Icon(Icons.history, color: Colors.white54),
                                 label: const Text(
                                   'View All',

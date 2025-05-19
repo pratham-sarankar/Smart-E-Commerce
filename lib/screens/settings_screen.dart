@@ -343,10 +343,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           subtitle: 'Invite a friend to make this app',
                           onTap: () async {
                             try {
-                              await Share.share(
-                                'Join me on MASTI LOTTIE! Download the app and start winning real money. Use my referral code: ${_userProfile?.id ?? ""}',
-                                subject: 'Join MASTI LOTTIE',
-                              );
+                              // Generate referral code first
+                              final result = await _userService.generateReferralCode();
+                              
+                              if (result['success']) {
+                                final referralCode = result['user']['referralCode'];
+                                await Share.share(
+                                  'Join me on Lakhpati Club! Download the app and start winning real money. Use my referral code: $referralCode',
+                                  subject: 'Join Lakhpati Club',
+                                );
+                              } else {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(result['message']),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
                             } catch (e) {
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(

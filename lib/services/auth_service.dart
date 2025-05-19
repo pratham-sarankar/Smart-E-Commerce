@@ -2,13 +2,18 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_eommerce/models/user_model.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class AuthService {
   final String baseUrl = 'https://lakhpati.api.smartchainstudio.in/api';
 
-  // User login
+  // User login with FCM token
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
+      // Get FCM token
+      String? fcmToken = await FirebaseMessaging.instance.getToken();
+      print('FCM Token for login: $fcmToken');
+
       print('Attempting login for email: $email');
       print('API URL: $baseUrl/user/login');
       
@@ -20,6 +25,7 @@ class AuthService {
         body: jsonEncode({
           'email': email,
           'password': password,
+          'firebaseToken': fcmToken, // Add FCM token to login request
         }),
       );
 
@@ -196,23 +202,38 @@ class AuthService {
     }
   }
 
-  // Register new user
-  Future<Map<String, dynamic>> register(String fullname, String email, String password, String dob) async {
+  // Register new user with FCM token
+  Future<Map<String, dynamic>> register(
+    String fullname, 
+    String email, 
+    String password, 
+    String dob, 
+    {String? referredBy}
+  ) async {
     try {
-      print('Attempting registration for email: $email');
-      print('API URL: $baseUrl/user/register');
-      
+      // Get FCM token
+      String? fcmToken = await FirebaseMessaging.instance.getToken();
+      print('FCM Token for registration: $fcmToken');
+
+      final registrationData = {
+        'fullname': fullname,
+        'email': email,
+        'password': password,
+        'dob': dob,
+        'firebaseToken': fcmToken, // Add FCM token to registration request
+      };
+
+      // Add referral code if provided
+      if (referredBy != null && referredBy.isNotEmpty) {
+        registrationData['referredBy'] = referredBy;
+      }
+
       final response = await http.post(
         Uri.parse('$baseUrl/user/register'),
         headers: {
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'fullname': fullname,
-          'email': email,
-          'password': password,
-          'dob': dob,
-        }),
+        body: jsonEncode(registrationData),
       );
 
       print('Response status code: ${response.statusCode}');
@@ -358,5 +379,58 @@ class AuthService {
         'message': 'Error: ${e.toString()}',
       };
     }
+  }
+
+  // Update FCM token on the server
+  Future<void> updateFcmToken() async {
+    try {
+      // Get current user token from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      if (token == null) {
+        print('No authentication token found. Skipping FCM token update.');
+        return;
+      }
+
+      // Get new FCM token
+      String? fcmToken = await FirebaseMessaging.instance.getToken();
+      
+      if (fcmToken == null) {
+        print('Failed to get FCM token');
+        return;
+      }
+
+      print('Updating FCM token: $fcmToken');
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl/user/update-fcm-token'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'fcmToken': fcmToken,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('FCM token updated successfully');
+      } else {
+        print('Failed to update FCM token: ${response.body}');
+      }
+    } catch (e) {
+      print('Error updating FCM token: $e');
+    }
+  }
+
+  // Listen for FCM token changes
+  void setupFcmTokenRefresh() {
+    FirebaseMessaging.instance.onTokenRefresh.listen((fcmToken) {
+      print('FCM Token refreshed: $fcmToken');
+      updateFcmToken();
+    }).onError((err) {
+      print('Error listening to FCM token refresh: $err');
+    });
   }
 } 

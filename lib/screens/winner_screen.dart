@@ -439,34 +439,34 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                                 
                                 const SizedBox(height: 16),
                                 
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton.icon(
-                                    onPressed: _isDonationLoading ? null : _handleDonation,
-                                    icon: _isDonationLoading 
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
-                                          ),
-                                        )
-                                      : const Icon(Icons.favorite_border),
-                                    label: Text(_isDonationLoading ? 'Processing...' : 'Donate 1 rupee'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: const Color(0xFFFFD700),
-                                      side: const BorderSide(color: Color(0xFFFFD700)),
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      splashFactory: InkRipple.splashFactory,
-                                      elevation: 2,
-                                      animationDuration: const Duration(milliseconds: 300),
-                                    ),
-                                  ),
-                                ),
+                                // SizedBox(
+                                //   width: double.infinity,
+                                //   child: OutlinedButton.icon(
+                                //     onPressed: _isDonationLoading ? null : _handleDonation,
+                                //     icon: _isDonationLoading 
+                                //       ? const SizedBox(
+                                //           width: 20,
+                                //           height: 20,
+                                //           child: CircularProgressIndicator(
+                                //             strokeWidth: 2,
+                                //             valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
+                                //           ),
+                                //         )
+                                //       : const Icon(Icons.favorite_border),
+                                //     label: Text(_isDonationLoading ? 'Processing...' : 'Donate 1 rupee'),
+                                //     style: OutlinedButton.styleFrom(
+                                //       foregroundColor: const Color(0xFFFFD700),
+                                //       side: const BorderSide(color: Color(0xFFFFD700)),
+                                //       padding: const EdgeInsets.symmetric(vertical: 16),
+                                //       shape: RoundedRectangleBorder(
+                                //         borderRadius: BorderRadius.circular(12),
+                                //       ),
+                                //       splashFactory: InkRipple.splashFactory,
+                                //       elevation: 2,
+                                //       animationDuration: const Duration(milliseconds: 300),
+                                //     ),
+                                //   ),
+                                // ),
                               ],
                             ),
                           ),

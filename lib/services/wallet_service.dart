@@ -197,4 +197,36 @@ class WalletService {
       throw Exception('Error making withdrawal request: $e');
     }
   }
+
+  Future<Map<String, dynamic>> getAllTransactions() async {
+    try {
+      final token = await _getAuthToken();
+      
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      final response = await http.get(
+        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/user/all-transactions'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else if (response.statusCode == 401) {
+        // Clear stored data on unauthorized access
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('token');
+        await prefs.remove('user_id');
+        await prefs.remove('user_email');
+        await prefs.setBool('is_logged_in', false);
+        throw Exception('Unauthorized: Please login again');
+      } else {
+        throw Exception('Request failed: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching transactions: $e');
+    }
+  }
 } 

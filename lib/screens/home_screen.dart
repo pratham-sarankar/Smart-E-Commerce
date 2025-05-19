@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_eommerce/screens/game_screen.dart';
 import 'package:smart_eommerce/screens/settings_screen.dart';
 import 'package:smart_eommerce/widgets/game_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -48,8 +49,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Thank you for your donation!')),
-    );
+      const SnackBar( backgroundColor: Colors.black, content: Text('Thank you for your donation!', style: TextStyle(color: Colors.white))));
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
@@ -393,7 +393,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         
                         // Total Withdrawals Section
                         const Text(
-                          'Total Withdrawals',
+                          'Club Joined Today',
                           style: TextStyle(
                             color: Color(0xFFFFD700),
                             fontSize: 22,
@@ -402,7 +402,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         ),
                         const SizedBox(height: 16),
                         
-                        // Total Withdrawals Card
+                        // Club Joined Today Card
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
@@ -420,14 +420,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text(
-                                    'Total Amount Withdrawn',
+                                    'Current Club',
                                     style: TextStyle(
                                       color: Colors.white54,
                                       fontSize: 14,
                                     ),
                                   ),
                                   Text(
-                                    _currencyFormat.format(_totalWinnings),
+                                    _getCurrentClub(),
                                     style: const TextStyle(
                                       color: Color(0xFFFFD700),
                                       fontSize: 24,
@@ -438,7 +438,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               ),
                               const SizedBox(height: 12),
                               const Text(
-                                'This is the total amount you have withdrawn from your winnings',
+                                'You are currently a member of this exciting club!',
                                 style: TextStyle(
                                   color: Colors.white54,
                                   fontSize: 12,
@@ -450,69 +450,111 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         
                         const SizedBox(height: 24),
                         
-                        // Donate Button
+                        // // Donate Button
+                        // SizedBox(
+                        //   width: double.infinity,
+                        //   height: 56,
+                        //   child: ElevatedButton(
+                        //     onPressed: _isLoading ? null : _handleDonation,
+                        //     style: ElevatedButton.styleFrom(
+                        //       backgroundColor: const Color(0xFFFFD700), // Gold color
+                        //       foregroundColor: const Color(0xFF0B1D3A),
+                        //       shape: RoundedRectangleBorder(
+                        //         borderRadius: BorderRadius.circular(12),
+                        //       ),
+                        //       elevation: 5,
+                        //       shadowColor: const Color(0xFFFFD700).withOpacity(0.6),
+                        //     ),
+                        //     child: AnimatedSwitcher(
+                        //       duration: const Duration(milliseconds: 300),
+                        //       transitionBuilder: (Widget child, Animation<double> animation) {
+                        //         return ScaleTransition(scale: animation, child: child);
+                        //       },
+                        //       child: _isLoading
+                        //           ? const SizedBox(
+                        //               width: 24,
+                        //               height: 24,
+                        //               child: CircularProgressIndicator(
+                        //                 strokeWidth: 3,
+                        //                 valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0B1D3A)),
+                        //               ),
+                        //             )
+                        //           : Material( // Wrap with Material for ripple effect
+                        //               color: Colors.transparent,
+                        //               child: Ink(
+                        //                 decoration: BoxDecoration(
+                        //                   borderRadius: BorderRadius.circular(12),
+                        //                 ),
+                        //                 child: InkWell(
+                        //                   borderRadius: BorderRadius.circular(12),
+                        //                   splashColor: Colors.white.withOpacity(0.3),
+                        //                   highlightColor: Colors.white.withOpacity(0.1),
+                        //                   onTap: _handleDonation,
+                        //                   child: Container(
+                        //                     width: double.infinity,
+                        //                     alignment: Alignment.center,
+                        //                     child: Row(
+                        //                       mainAxisAlignment: MainAxisAlignment.center,
+                        //                       children: const [
+                        //                         Icon(Icons.favorite, color: Color(0xFF0B1D3A), size: 20),
+                        //                         SizedBox(width: 8),
+                        //                         Text(
+                        //                           'Donate ₹1',
+                        //                           style: TextStyle(
+                        //                             color: Color(0xFF0B1D3A),
+                        //                             fontSize: 18,
+                        //                             fontWeight: FontWeight.w600,
+                        //                             letterSpacing: 0.5,
+                        //                           ),
+                        //                         ),
+                        //                       ],
+                        //                     ),
+                        //                   ),
+                        //                 ),
+                        //               ),
+                        //             ),
+                        //     ),
+                        //   ),
+                        // ),
+
+                        // const SizedBox(height: 24),
+                        
+                        // Play Now Button
                         SizedBox(
                           width: double.infinity,
                           height: 56,
                           child: ElevatedButton(
-                            onPressed: _isLoading ? null : _handleDonation,
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const GameScreen()),
+                              );
+                            },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFFD700), // Gold color
-                              foregroundColor: const Color(0xFF0B1D3A),
+                              backgroundColor: const Color(0xFF1E3A70), // Dark blue color
+                              foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
+                                side: const BorderSide(color: Color(0xFFFFD700), width: 1),
                               ),
                               elevation: 5,
-                              shadowColor: const Color(0xFFFFD700).withOpacity(0.6),
+                              shadowColor: Colors.white.withOpacity(0.3),
                             ),
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              transitionBuilder: (Widget child, Animation<double> animation) {
-                                return ScaleTransition(scale: animation, child: child);
-                              },
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 3,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0B1D3A)),
-                                      ),
-                                    )
-                                  : Material( // Wrap with Material for ripple effect
-                                      color: Colors.transparent,
-                                      child: Ink(
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: InkWell(
-                                          borderRadius: BorderRadius.circular(12),
-                                          splashColor: Colors.white.withOpacity(0.3),
-                                          highlightColor: Colors.white.withOpacity(0.1),
-                                          onTap: _handleDonation,
-                                          child: Container(
-                                            width: double.infinity,
-                                            alignment: Alignment.center,
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: const [
-                                                Icon(Icons.favorite, color: Color(0xFF0B1D3A), size: 20),
-                                                SizedBox(width: 8),
-                                                Text(
-                                                  'Donate ₹1',
-                                                  style: TextStyle(
-                                                    color: Color(0xFF0B1D3A),
-                                                    fontSize: 18,
-                                                    fontWeight: FontWeight.w600,
-                                                    letterSpacing: 0.5,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Icon(Icons.play_circle_fill, color: Color(0xFFFFD700), size: 24),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Play Now',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -541,6 +583,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
     
     return '$greeting,\n$_userName';
+  }
+
+  String _getCurrentClub() {
+    // TODO: Implement actual logic to determine current club
+    // This could come from:
+    // 1. User's last game participation
+    // 2. Most recent payment
+    // 3. Backend API call
+    
+    // Placeholder logic
+    final hour = DateTime.now().hour;
+    
+    if (hour < 12) {
+      return 'Silver Club';
+    } else if (hour < 17) {
+      return 'Gold Club';
+    } else {
+      return 'Platinum Club';
+    }
   }
 }
 

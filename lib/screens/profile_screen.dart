@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smart_eommerce/models/user_model.dart';
 import 'package:smart_eommerce/screens/main_screen.dart';
+import 'package:smart_eommerce/screens/scratch_card_screen.dart';
 import 'package:smart_eommerce/services/user_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -108,6 +109,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isLoggingOut = false;
       });
     }
+  }
+
+  void _navigateToScratchCard() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ScratchCardScreen(
+          amount: 5, // Default amount, can be modified
+          clubName: 'Gold Club', // Default club name, can be modified
+        ),
+      ),
+    );
   }
 
   @override
@@ -311,12 +324,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         value: _userProfile?.email ?? 'Not available',
                                       ),
 
-                                      // Verification status
+                                      // Scratch Card section
                                       ProfileInfoItem(
-                                        icon: Icons.verified_user,
+                                        icon: Icons.card_giftcard,
                                         iconColor: const Color(0xFFFFD700),
-                                        title: 'Verification Status',
-                                        value: _formatVerificationStatus(_userProfile?.isVerified),
+                                        title: 'Scratch Card',
+                                        value: 'Check your rewards',
+                                        onTap: _navigateToScratchCard,
                                       ),
                                     ],
                                   ),
@@ -534,21 +548,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ],
     );
   }
-
-  String _formatVerificationStatus(String? status) {
-    if (status == null) return 'Not available';
-    
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return 'Pending Verification';
-      case 'verified':
-        return 'Verified';
-      case 'rejected':
-        return 'Verification Rejected';
-      default:
-        return status;
-    }
-  }
 }
 
 class ProfileInfoItem extends StatelessWidget {
@@ -556,6 +555,7 @@ class ProfileInfoItem extends StatelessWidget {
   final Color iconColor;
   final String title;
   final String value;
+  final VoidCallback? onTap;
 
   const ProfileInfoItem({
     Key? key,
@@ -563,49 +563,59 @@ class ProfileInfoItem extends StatelessWidget {
     required this.iconColor,
     required this.title,
     required this.value,
+    this.onTap,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              shape: BoxShape.circle,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor),
             ),
-            child: Icon(icon, color: iconColor),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white.withOpacity(0.8),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white.withOpacity(0.8),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            if (onTap != null)
+              Icon(
+                Icons.chevron_right,
+                color: Colors.white.withOpacity(0.6),
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -187,6 +187,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             }
           });
           
+          // Setup FCM token refresh listener
+          _authService.setupFcmTokenRefresh();
+          
           print('Login successful, navigating to main screen');
           // Navigate to Main Screen on successful login
           Navigator.pushReplacementNamed(context, '/main');

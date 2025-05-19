@@ -189,4 +189,46 @@ class UserService {
       print('Error clearing user data: $e');
     }
   }
+
+  // Generate referral code
+  Future<Map<String, dynamic>> generateReferralCode() async {
+    try {
+      final token = await _getToken();
+      
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Authentication token not found. Please login again.',
+        };
+      }
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl/user/generate-referral'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+      
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': 'Referral code generated successfully',
+          'user': data['user'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to generate referral code',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'An error occurred. Please check your connection and try again.',
+      };
+    }
+  }
 } 

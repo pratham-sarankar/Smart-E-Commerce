@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:smart_eommerce/auth/login_screen.dart';
 import 'package:smart_eommerce/auth/splash_screen.dart';
 import 'package:smart_eommerce/user_onboarding/personal_details_screen.dart';
@@ -9,8 +11,19 @@ import 'package:smart_eommerce/screens/main_screen.dart';
 import 'package:smart_eommerce/auth/register_screen.dart';
 import 'package:smart_eommerce/auth/forgot_password_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  await Firebase.initializeApp();
+  
+  // Request notification permissions
+  await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -27,7 +40,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Lakhpati Club',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primaryColor: Color(0xFF0B1D3A),

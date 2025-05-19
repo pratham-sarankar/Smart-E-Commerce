@@ -3,6 +3,7 @@ import 'package:smart_eommerce/services/auth_service.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:flutter/services.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -17,6 +18,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _dobController = TextEditingController();
+  final _referralCodeController = TextEditingController();
   final AuthService _authService = AuthService();
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -36,6 +38,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _dobController.dispose();
+    _referralCodeController.dispose();
     super.dispose();
   }
 
@@ -77,11 +80,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
       try {
         print('Starting registration process for email: ${_emailController.text.trim()}');
         
+        // Prepare registration data
+        Map<String, dynamic> registrationData = {
+          'fullname': _fullnameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'password': _passwordController.text,
+          'dob': _dobController.text,
+        };
+
+        // Add referral code if it's not empty
+        if (_referralCodeController.text.trim().isNotEmpty) {
+          registrationData['referredBy'] = _referralCodeController.text.trim();
+        }
+        
         final result = await _authService.register(
-          _fullnameController.text.trim(),
-          _emailController.text.trim(),
-          _passwordController.text,
-          _dobController.text,
+          registrationData['fullname'],
+          registrationData['email'],
+          registrationData['password'],
+          registrationData['dob'],
+          referredBy: registrationData['referredBy'],
         );
 
         print('Registration result: $result');
@@ -100,6 +117,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
             'fullname': _fullnameController.text.trim(),
             'dob': _dobController.text,
           }));
+          
+          // Setup FCM token refresh listener
+          _authService.setupFcmTokenRefresh();
           
           // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
@@ -698,6 +718,57 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 errorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(color: Colors.red, width: 1.0),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // Add Referral Code field (optional)
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 5,
+                                  spreadRadius: 1,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: TextFormField(
+                              controller: _referralCodeController,
+                              textCapitalization: TextCapitalization.characters,
+                              inputFormatters: [
+                                LengthLimitingTextInputFormatter(8),
+                                FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                              ],
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Color(0xFF0B1D3A),
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Referral Code (Optional)',
+                                hintStyle: TextStyle(fontSize: 15, color: Colors.black54),
+                                prefixIcon: Container(
+                                  margin: EdgeInsets.only(left: 12, right: 8),
+                                  child: Icon(Icons.card_giftcard, color: Color(0xFFFFD700), size: 22),
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Color(0xFFFFD700), width: 1.0),
                                 ),
                               ),
                             ),
