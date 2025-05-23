@@ -30,6 +30,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   double _availableBalance = 0.0;
   double _totalWinnings = 0.0;
   final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
+  List<dynamic> _todaysDrawEntries = [];
+  double _totalDrawAmount = 0.0;
 
   @override
   void initState() {
@@ -38,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _loadUserProfile();
     _loadWalletData();
     _initializeRazorpay();
+    _fetchTodaysDraw();
   }
 
   void _initializeRazorpay() {
@@ -120,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       
       // Fetch total winning amount
       final response = await http.get(
-        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/user/total-wining'),
+        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/user/total-wining'),
         headers: {
           'Authorization': 'Bearer ${await _getAuthToken()}',
           'Content-Type': 'application/json',
@@ -141,6 +144,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Future<String> _getAuthToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('token') ?? '';
+  }
+
+  Future<void> _fetchTodaysDraw() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/user/todays-draw'),
+        headers: {
+          'Authorization': 'Bearer ${await _getAuthToken()}',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['entry'] != null) {
+          setState(() {
+            _todaysDrawEntries = data['entry']['entries'] ?? [];
+            _totalDrawAmount = (data['entry']['totalAmount'] as num?)?.toDouble() ?? 0.0;
+          });
+        }
+      } else {
+        print('Failed to fetch today\'s draw: ${response.body}');
+      }
+    } catch (e) {
+      print('Error fetching today\'s draw: $e');
+    }
   }
 
   @override
@@ -260,6 +289,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               onRefresh: () async {
                 await _loadUserProfile();
                 await _loadWalletData();
+                await _fetchTodaysDraw();
               },
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -275,10 +305,42 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         // Greeting section
                         Row(
                           children: [
-                            CircleAvatar(
-                              radius: 28,
-                              backgroundImage: AssetImage('assets/images/profile_pic.png'),
-                              backgroundColor: const Color(0xFFFFD700).withOpacity(0.2),
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(0xFFFFD700),
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 8,
+                                    spreadRadius: 1,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(28),
+                                child: _userProfile?.profileImage != null
+                                    ? Image.network(
+                                        _userProfile!.profileImage!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Image.asset(
+                                            'assets/images/profile_pic.png',
+                                            fit: BoxFit.cover,
+                                          );
+                                        },
+                                      )
+                                    : Image.asset(
+                                        'assets/images/profile_pic.png',
+                                        fit: BoxFit.cover,
+                                      ),
+                              ),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -391,133 +453,207 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         
                         const SizedBox(height: 32),
                         
-                        // Total Withdrawals Section
-                        const Text(
-                          'Club Joined Today',
-                          style: TextStyle(
-                            color: Color(0xFFFFD700),
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                        // Today's Draw Section
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              left: BorderSide(
+                                color: const Color(0xFFFFD700),
+                                width: 4,
+                              ),
+                            ),
+                          ),
+                          child: const Text(
+                            'Today\'s Draw Entries',
+                            style: TextStyle(
+                              color: Color(0xFFFFD700),
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
                         
-                        // Club Joined Today Card
+                        // Today's Draw Card
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
                             color: const Color(0xFF1E3A70),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: const Color(0xFFFFD700),
                               width: 1,
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    'Current Club',
-                                    style: TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 14,
-                                    ),
+                              // Header with total amount
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0B1D3A),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: const Color(0xFFFFD700).withOpacity(0.3),
+                                    width: 1,
                                   ),
-                                  Text(
-                                    _getCurrentClub(),
-                                    style: const TextStyle(
-                                      color: Color(0xFFFFD700),
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Total Draw Amount',
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          _currencyFormat.format(_totalDrawAmount),
+                                          style: const TextStyle(
+                                            color: Color(0xFFFFD700),
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'You are currently a member of this exciting club!',
-                                style: TextStyle(
-                                  color: Colors.white54,
-                                  fontSize: 12,
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFFD700).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: const Color(0xFFFFD700).withOpacity(0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '${_todaysDrawEntries.length} Entries',
+                                        style: const TextStyle(
+                                          color: Color(0xFFFFD700),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
+                              const SizedBox(height: 20),
+                              
+                              // Entries List
+                              if (_todaysDrawEntries.isEmpty)
+                                Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 20),
+                                    child: Text(
+                                      'No entries for today\'s draw',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.6),
+                                        fontSize: 16,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              else
+                                ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: _todaysDrawEntries.length,
+                                  separatorBuilder: (context, index) => Divider(
+                                    color: Colors.white.withOpacity(0.1),
+                                    height: 16,
+                                  ),
+                                  itemBuilder: (context, index) {
+                                    final entry = _todaysDrawEntries[index];
+                                    final ticket = entry['participationTicket'];
+                                    final isWinner = ticket['isWinner'] ?? false;
+                                    
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                      decoration: BoxDecoration(
+                                        color: isWinner ? Colors.green.withOpacity(0.1) : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          // Plan
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              'Plan ${ticket['plan']}',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                          // Lucky Number
+                                          Expanded(
+                                            flex: 2,
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFFFD700).withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(
+                                                  color: const Color(0xFFFFD700).withOpacity(0.3),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                'Lucky #${ticket['luckyNumber']}',
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  color: Color(0xFFFFD700),
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          // Amount
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              _currencyFormat.format(ticket['amount']),
+                                              textAlign: TextAlign.right,
+                                              style: TextStyle(
+                                                color: isWinner ? Colors.green : Colors.white70,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
                             ],
                           ),
                         ),
-                        
-                        const SizedBox(height: 24),
-                        
-                        // // Donate Button
-                        // SizedBox(
-                        //   width: double.infinity,
-                        //   height: 56,
-                        //   child: ElevatedButton(
-                        //     onPressed: _isLoading ? null : _handleDonation,
-                        //     style: ElevatedButton.styleFrom(
-                        //       backgroundColor: const Color(0xFFFFD700), // Gold color
-                        //       foregroundColor: const Color(0xFF0B1D3A),
-                        //       shape: RoundedRectangleBorder(
-                        //         borderRadius: BorderRadius.circular(12),
-                        //       ),
-                        //       elevation: 5,
-                        //       shadowColor: const Color(0xFFFFD700).withOpacity(0.6),
-                        //     ),
-                        //     child: AnimatedSwitcher(
-                        //       duration: const Duration(milliseconds: 300),
-                        //       transitionBuilder: (Widget child, Animation<double> animation) {
-                        //         return ScaleTransition(scale: animation, child: child);
-                        //       },
-                        //       child: _isLoading
-                        //           ? const SizedBox(
-                        //               width: 24,
-                        //               height: 24,
-                        //               child: CircularProgressIndicator(
-                        //                 strokeWidth: 3,
-                        //                 valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0B1D3A)),
-                        //               ),
-                        //             )
-                        //           : Material( // Wrap with Material for ripple effect
-                        //               color: Colors.transparent,
-                        //               child: Ink(
-                        //                 decoration: BoxDecoration(
-                        //                   borderRadius: BorderRadius.circular(12),
-                        //                 ),
-                        //                 child: InkWell(
-                        //                   borderRadius: BorderRadius.circular(12),
-                        //                   splashColor: Colors.white.withOpacity(0.3),
-                        //                   highlightColor: Colors.white.withOpacity(0.1),
-                        //                   onTap: _handleDonation,
-                        //                   child: Container(
-                        //                     width: double.infinity,
-                        //                     alignment: Alignment.center,
-                        //                     child: Row(
-                        //                       mainAxisAlignment: MainAxisAlignment.center,
-                        //                       children: const [
-                        //                         Icon(Icons.favorite, color: Color(0xFF0B1D3A), size: 20),
-                        //                         SizedBox(width: 8),
-                        //                         Text(
-                        //                           'Donate ₹1',
-                        //                           style: TextStyle(
-                        //                             color: Color(0xFF0B1D3A),
-                        //                             fontSize: 18,
-                        //                             fontWeight: FontWeight.w600,
-                        //                             letterSpacing: 0.5,
-                        //                           ),
-                        //                         ),
-                        //                       ],
-                        //                     ),
-                        //                   ),
-                        //                 ),
-                        //               ),
-                        //             ),
-                        //     ),
-                        //   ),
-                        // ),
 
-                        // const SizedBox(height: 24),
+                        const SizedBox(height: 24),
                         
                         // Play Now Button
                         SizedBox(
@@ -540,21 +676,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               elevation: 5,
                               shadowColor: Colors.white.withOpacity(0.3),
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: const [
                                 Icon(Icons.play_circle_fill, color: Color(0xFFFFD700), size: 24),
-                                SizedBox(width: 8),
-                                Text(
+                                                SizedBox(width: 8),
+                                                Text(
                                   'Play Now',
-                                  style: TextStyle(
+                                                  style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.w600,
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                ),
+                                              ],
                             ),
                           ),
                         ),
@@ -583,25 +719,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
     
     return '$greeting,\n$_userName';
-  }
-
-  String _getCurrentClub() {
-    // TODO: Implement actual logic to determine current club
-    // This could come from:
-    // 1. User's last game participation
-    // 2. Most recent payment
-    // 3. Backend API call
-    
-    // Placeholder logic
-    final hour = DateTime.now().hour;
-    
-    if (hour < 12) {
-      return 'Silver Club';
-    } else if (hour < 17) {
-      return 'Gold Club';
-    } else {
-      return 'Platinum Club';
-    }
   }
 }
 

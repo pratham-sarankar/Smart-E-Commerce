@@ -5,6 +5,7 @@ import 'package:smart_eommerce/services/user_service.dart';
 import 'package:smart_eommerce/models/user_model.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:smart_eommerce/screens/home_screen.dart';
+import 'package:smart_eommerce/screens/feedback_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -325,7 +326,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           iconColor: const Color(0xFFFFD700),
                           title: 'Feedback',
                           subtitle: 'Chat and notifications settings',
-                          onTap: () {},
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const FeedbackScreen()),
+                            );
+                          },
                         ),
                         
                         SettingsItem(

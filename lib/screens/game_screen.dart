@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:smart_eommerce/screens/scratch_card_screen.dart';
 import 'package:video_player/video_player.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:smart_eommerce/services/user_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({Key? key}) : super(key: key);
@@ -13,8 +17,13 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> {
   late VideoPlayerController _videoController;
   Razorpay? _razorpay;
+  bool _isLoading = false;
+  final UserService _userService = UserService();
+
+  // Variables to store current club details
   late int amount;
   late String clubName;
+  late int selectedNumber;
 
   @override
   void initState() {
@@ -42,17 +51,159 @@ class _GameScreenState extends State<GameScreen> {
     _razorpay!.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
   }
 
-  void _handlePaymentSuccess(PaymentSuccessResponse response) {
-    // Navigate to Scratch Card Screen
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ScratchCardScreen(
-          amount: amount, 
-          clubName: clubName,
+  Future<void> _createDrawOrder(int amount, String clubName, String tagline, int selectedNumber) async {
+    setState(() {
+      _isLoading = true;
+      // Store the selected number as a class-level variable
+      this.selectedNumber = selectedNumber;
+    });
+
+    try {
+      // Get auth token
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      // Validate token
+      if (token.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Authentication token is missing. Please login again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Create order API call
+      final response = await http.post(
+        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/draw/create-order'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'amount': amount.toString(), // Send as string
+          'luckyNumber': selectedNumber.toString(), // Send as string with key 'luckyNumber'
+        }),
+      );
+
+      // Log the request details for debugging
+      print('Request URL: https://4sr8mplp-3035.inc1.devtunnels.ms/api/draw/create-order');
+      print('Request Headers: ${{'Content-Type': 'application/json', 'Authorization': 'Bearer $token'}}');
+      print('Request Body: ${jsonEncode({'amount': amount.toString(), 'luckyNumber': selectedNumber.toString()})}');
+      print('Response Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+
+      final responseData = json.decode(response.body);
+
+      if (responseData['success']) {
+        // Proceed with Razorpay payment
+        _initiateRazorpayPayment(
+          responseData['orderId'], 
+          amount, 
+          clubName, 
+          tagline,
+          selectedNumber
+        );
+      } else {
+        // Handle order creation failure
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(responseData['message'] ?? 'Failed to create order'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // Log the error for debugging
+      print('Error creating order: $e');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error creating order: $e'),
+          backgroundColor: Colors.red,
         ),
-      ),
-    );
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _initiateRazorpayPayment(String orderId, int amount, String clubName, String tagline, int selectedNumber) {
+    var options = {
+      'key': 'rzp_test_NMHJrIP0HgARfE',
+      'amount': amount * 100, // Amount in smallest currency unit (paise)
+      'name': 'Lakhpati Club',
+      'description': '$clubName - Number $selectedNumber',
+      'order_id': orderId,
+      'prefill': {
+        'contact': '',
+        'email': '',
+      },
+      'notes': {
+        'club': clubName,
+        'tagline': tagline,
+        'selected_number': selectedNumber,
+      }
+    };
+
+    _razorpay!.open(options);
+  }
+
+  Future<void> _verifyPayment(PaymentSuccessResponse response) async {
+    try {
+      // Get auth token
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      // Verify payment API call
+      final verifyResponse = await http.post(
+        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/draw/payment-verify'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'razorpay_payment_id': response.paymentId,
+          'razorpay_order_id': response.orderId,
+          'razorpay_signature': response.signature,
+          // 'amount': amount.toString(), // Use the amount from class variable
+          // 'luckyNumber': selectedNumber.toString(), // Use the selected number from class variable
+        }),
+      );
+
+      final verifyData = json.decode(verifyResponse.body);
+
+      if (verifyData['success']) {
+        // Show success message instead of navigating to scratch card
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Payment successful!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(verifyData['message'] ?? 'Payment verification failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error verifying payment: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) {
+    _verifyPayment(response);
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
@@ -62,13 +213,6 @@ class _GameScreenState extends State<GameScreen> {
         backgroundColor: Colors.red,
       ),
     );
-  }
-
-  String _getClubName(int? amount) {
-    if (amount == 100) return 'Silver Club';
-    if (amount == 500) return 'Gold Club';
-    if (amount == 1000) return 'Platinum Club';
-    return 'Club';
   }
 
   void _showNumberSelectionDialog(String clubName, int amount, String tagline) {
@@ -134,7 +278,8 @@ class _GameScreenState extends State<GameScreen> {
                 final selectedNumber = int.tryParse(numberController.text);
                 if (selectedNumber != null && selectedNumber >= 1 && selectedNumber <= 100) {
                   Navigator.of(context).pop();
-                  _initiatePayment(amount, clubName, tagline, selectedNumber);
+                  // Create draw order with the selected number
+                  _createDrawOrder(amount, clubName, tagline, selectedNumber);
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -316,7 +461,16 @@ class _GameScreenState extends State<GameScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () => _showNumberSelectionDialog(clubName, amount, tagline),
+          onTap: _isLoading 
+            ? null 
+            : () {
+                // Store current club details
+                this.amount = amount;
+                this.clubName = clubName;
+                
+                // Show number selection dialog first
+                _showNumberSelectionDialog(clubName, amount, tagline);
+              },
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -361,14 +515,23 @@ class _GameScreenState extends State<GameScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const Text(
-                      'Select Number & Play',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    _isLoading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
+                          ),
+                        )
+                      : const Text(
+                          'Tap to Join',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                   ],
                 ),
               ],

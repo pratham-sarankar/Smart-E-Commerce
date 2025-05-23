@@ -5,6 +5,11 @@ import '../services/wallet_service.dart';
 import 'package:intl/intl.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'transaction_history_screen.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({Key? key}) : super(key: key);
@@ -21,6 +26,8 @@ class _WalletScreenState extends State<WalletScreen> {
   int? _currentPaymentAmount;
   final List<Map<String, dynamic>> _transactions = [];
   final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
+  String? videoPath;
+  bool _isUploadingVideo = false;
 
   @override
   void initState() {
@@ -393,10 +400,17 @@ class _WalletScreenState extends State<WalletScreen> {
   Future<void> _handleWithdraw() async {
     final TextEditingController amountController = TextEditingController();
     final FocusNode amountFocusNode = FocusNode();
+    String? selectedWithdrawalType = 'simple';
+    
+    // Reset video upload state when opening dialog
+    setState(() {
+      videoPath = null;
+      _isUploadingVideo = false;
+    });
     
     // Predefined withdrawal amounts
     final withdrawAmounts = [
-      100, 500, 1000, 2000, 5000
+      500, 1000, 2000, 5000, 10000
     ];
 
     await showDialog(
@@ -406,6 +420,9 @@ class _WalletScreenState extends State<WalletScreen> {
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.all(20),
           child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.85, // Limit height to 85% of screen
+            ),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -428,208 +445,648 @@ class _WalletScreenState extends State<WalletScreen> {
                 ),
               ],
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Header with icon
-                  Container(
-                    padding: const EdgeInsets.all(15),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFD700).withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.monetization_on_outlined,
-                      color: Color(0xFFFFD700),
-                      size: 40,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  
-                  // Title
-                  const Text(
-                    'Withdraw from Wallet',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  
-                  // Current Balance Display
-                  Text(
-                    'Available Balance: ${_currencyFormat.format(_balance)}',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  
-                  // Amount Input
-                  TextField(
-                    controller: amountController,
-                    focusNode: amountFocusNode,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Colors.white, fontSize: 18),
-                    decoration: InputDecoration(
-                      hintText: 'Enter withdrawal amount',
-                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-                      prefixIcon: const Icon(Icons.currency_rupee, color: Color(0xFFFFD700)),
-                      filled: true,
-                      fillColor: const Color(0xFF1E3A70),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Header with icon
+                    Container(
+                      padding: const EdgeInsets.all(15),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFD700).withOpacity(0.2),
+                        shape: BoxShape.circle,
                       ),
-                      focusedBorder: OutlineInputBorder(
+                      child: const Icon(
+                        Icons.monetization_on_outlined,
+                        color: Color(0xFFFFD700),
+                        size: 40,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Title
+                    const Text(
+                      'Withdraw from Wallet',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    
+                    // Current Balance Display
+                    Text(
+                      'Available Balance: ${_currencyFormat.format(_balance)}',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Withdrawal Type Selection
+                    Container(
+                      padding: const EdgeInsets.all(15),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E3A70),
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFFFD700),
-                          width: 2,
+                        border: Border.all(
+                          color: const Color(0xFFFFD700).withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Select Withdrawal Type',
+                            style: TextStyle(
+                              color: Color(0xFFFFD700),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      selectedWithdrawalType = 'simple';
+                                    });
+                                  },
+                                  child: Container(
+                                    height: 155, // Further reduced height
+                                    padding: const EdgeInsets.all(12), // Reduced padding
+                                    decoration: BoxDecoration(
+                                      color: selectedWithdrawalType == 'simple' 
+                                          ? const Color(0xFFFFD700).withOpacity(0.1)
+                                          : const Color(0xFF1E3A70),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: selectedWithdrawalType == 'simple'
+                                            ? const Color(0xFFFFD700)
+                                            : const Color(0xFFFFD700).withOpacity(0.3),
+                                        width: selectedWithdrawalType == 'simple' ? 2 : 1,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(10), // Reduced padding
+                                          decoration: BoxDecoration(
+                                            color: selectedWithdrawalType == 'simple'
+                                                ? const Color(0xFFFFD700).withOpacity(0.2)
+                                                : const Color(0xFFFFD700).withOpacity(0.1),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.account_balance_wallet_outlined,
+                                            color: selectedWithdrawalType == 'simple'
+                                                ? const Color(0xFFFFD700)
+                                                : const Color(0xFFFFD700).withOpacity(0.7),
+                                            size: 24, // Reduced icon size
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8), // Reduced spacing
+                                        const Text(
+                                          textAlign: TextAlign.center,
+                                          'Simple Withdraw',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14, // Reduced font size
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4), // Reduced spacing
+                                        Text(
+                                          'Direct withdrawal to your account',
+                                          style: TextStyle(
+                                            color: Colors.white.withOpacity(0.7),
+                                            fontSize: 10,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12), // Reduced spacing
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      selectedWithdrawalType = 'winnings';
+                                    });
+                                  },
+                                  child: Container(
+                                    height: 155, // Further reduced height
+                                    padding: const EdgeInsets.all(12), // Reduced padding
+                                    decoration: BoxDecoration(
+                                      color: selectedWithdrawalType == 'winnings'
+                                          ? const Color(0xFFFFD700).withOpacity(0.1)
+                                          : const Color(0xFF1E3A70),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: selectedWithdrawalType == 'winnings'
+                                            ? const Color(0xFFFFD700)
+                                            : const Color(0xFFFFD700).withOpacity(0.3),
+                                        width: selectedWithdrawalType == 'winnings' ? 2 : 1,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(10), // Reduced padding
+                                          decoration: BoxDecoration(
+                                            color: selectedWithdrawalType == 'winnings'
+                                                ? const Color(0xFFFFD700).withOpacity(0.2)
+                                                : const Color(0xFFFFD700).withOpacity(0.1),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.emoji_events_outlined,
+                                            color: selectedWithdrawalType == 'winnings'
+                                                ? const Color(0xFFFFD700)
+                                                : const Color(0xFFFFD700).withOpacity(0.7),
+                                            size: 24, // Reduced icon size
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8), // Reduced spacing
+                                        const Text(
+                                          textAlign: TextAlign.center,
+                                          'Withdraw Winnings',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14, // Reduced font size
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4), // Reduced spacing
+                                        Text(
+                                          'Withdraw with video proof',
+                                          style: TextStyle(
+                                            color: Colors.white.withOpacity(0.7),
+                                            fontSize: 10,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Amount Input
+                    TextField(
+                      controller: amountController,
+                      focusNode: amountFocusNode,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(color: Colors.white, fontSize: 18),
+                      decoration: InputDecoration(
+                        hintText: 'Enter withdrawal amount',
+                        hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                        prefixIcon: const Icon(Icons.currency_rupee, color: Color(0xFFFFD700)),
+                        filled: true,
+                        fillColor: const Color(0xFF1E3A70),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFFFD700),
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 15),
-                  
-                  // Quick Amount Buttons
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: withdrawAmounts.map((amount) => 
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(10),
-                          onTap: () {
-                            amountController.text = amount.toString();
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E3A70),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: const Color(0xFFFFD700).withOpacity(0.5),
+                    const SizedBox(height: 15),
+                    
+                    // Quick Amount Buttons
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: withdrawAmounts.map((amount) => 
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: () {
+                              amountController.text = amount.toString();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E3A70),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(0xFFFFD700).withOpacity(0.5),
+                                ),
+                              ),
+                              child: Text(
+                                '₹$amount',
+                                style: const TextStyle(
+                                  color: Color(0xFFFFD700),
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                            child: Text(
-                              '₹$amount',
-                              style: const TextStyle(
+                          ),
+                        )
+                      ).toList(),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Video Upload Section (only for Withdraw Winnings)
+                    if (selectedWithdrawalType == 'winnings') ...[
+                      Container(
+                        padding: const EdgeInsets.all(15),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E3A70),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFFFFD700).withOpacity(0.3),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Upload Video Proof',
+                              style: TextStyle(
                                 color: Color(0xFFFFD700),
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ),
-                        ),
-                      )
-                    ).toList(),
-                  ),
-                  const SizedBox(height: 20),
-                  
-                  // Action Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.white54),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Please upload a video showing your winning moment',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(color: Colors.white54),
-                          ),
+                            const SizedBox(height: 15),
+                            InkWell(
+                              onTap: () async {
+                                if (_isUploadingVideo) return;
+                                
+                                try {
+                                  setState(() {
+                                    _isUploadingVideo = true;
+                                    _isLoading = true;
+                                  });
+                                  
+                                  final result = await _pickAndUploadVideo();
+                                  if (result != null) {
+                                    setState(() {
+                                      videoPath = result;
+                                    });
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Video uploaded successfully', style: const TextStyle(color: Colors.white),),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(e.toString(), style: const TextStyle(color: Colors.white),),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                } finally {
+                                  if (mounted) {
+                                    setState(() {
+                                      _isUploadingVideo = false;
+                                      _isLoading = false;
+                                    });
+                                  }
+                                }
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(vertical: 15),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFD700).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: const Color(0xFFFFD700),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    if (_isUploadingVideo)
+                                      const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    else if (videoPath != null)
+                                      const Icon(
+                                        Icons.check_circle,
+                                        color: Color(0xFFFFD700),
+                                      )
+                                    else
+                                      const Icon(
+                                        Icons.video_library,
+                                        color: Color(0xFFFFD700),
+                                      ),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      _isUploadingVideo 
+                                          ? 'Uploading...'
+                                          : videoPath != null 
+                                              ? 'Video Uploaded'
+                                              : 'Upload or Record Video',
+                                      style: const TextStyle(
+                                        color: Color(0xFFFFD700),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            if (amountController.text.isEmpty) return;
-                            
-                            final amount = double.tryParse(amountController.text);
-                            if (amount == null || amount <= 0) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Please enter a valid amount')),
-                              );
-                              return;
-                            }
-
-                            if (amount > _balance) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Insufficient balance')),
-                              );
-                              return;
-                            }
-
-                            setState(() => _isLoading = true);
-
-                            try {
-                              final response = await _walletService.requestWithdrawal(amount);
-                              
-                              if (!mounted) return;
-                              
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(response['message'] ?? 'Withdrawal request submitted')),
-                              );
-                              
-                              Navigator.pop(context);
-                              
-                              await _loadWalletData();
-                            } catch (e) {
-                              if (!mounted) return;
-                              
-                              if (e.toString().contains('Unauthorized') || 
-                                  e.toString().contains('Authentication token not found')) {
-                                _handleAuthError(context);
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error: ${e.toString()}')),
-                                );
-                              }
-                              Navigator.pop(context);
-                            } finally {
-                              if (mounted) {
-                                setState(() => _isLoading = false);
-                              }
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFFD700),
-                            foregroundColor: const Color(0xFF0B1D3A),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            'Withdraw',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
+                      const SizedBox(height: 20),
                     ],
-                  ),
-                ],
+                    
+                    // Action Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.white54),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(color: Colors.white54),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              if (amountController.text.isEmpty) return;
+                              
+                              if (selectedWithdrawalType == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Please select withdrawal type', style: TextStyle(color: Colors.white),)),
+                                );
+                                return;
+                              }
+
+                              if (selectedWithdrawalType == 'winnings' && videoPath == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Please upload video proof', style: TextStyle(color: Colors.white),)),
+                                );
+                                return;
+                              }
+                              
+                              final amount = double.tryParse(amountController.text);
+                              if (amount == null || amount <= 0) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Please enter a valid amount', style: TextStyle(color: Colors.white),)),
+                                );
+                                return;
+                              }
+
+                              if (amount < 500) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Minimum withdrawal amount is ₹500', style: TextStyle(color: Colors.white),)),
+                                );
+                                return;
+                              }
+
+                              if (amount > _balance) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Insufficient balance', style: TextStyle(color: Colors.white),)),
+                                );
+                                return;
+                              }
+
+                              setState(() => _isLoading = true);
+
+                              try {
+                                final response = await _walletService.requestWithdrawal(
+                                  amount,
+                                  videoPath: selectedWithdrawalType == 'winnings' ? videoPath : null,
+                                );
+                                
+                                if (!mounted) return;
+                                
+                                if (response['success'] == true) {
+                                  // Close dialog first before showing snackbar
+                                  Navigator.pop(context);
+                                  
+                                  // Reload wallet data
+                                  await _loadWalletData();
+                                  
+                                  if (!mounted) return;
+                                  
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        response['message'] ?? 'Withdrawal request submitted successfully',
+                                        style: const TextStyle(color: Colors.white),
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                } else {
+                                  if (!mounted) return;
+                                  
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        response['message'] ?? 'Failed to submit withdrawal request',
+                                        style: const TextStyle(color: Colors.white),
+                                      ),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (!mounted) return;
+                                
+                                String errorMessage;
+                                if (e.toString().contains('Unauthorized') || 
+                                    e.toString().contains('Authentication token not found')) {
+                                  Navigator.pop(context); // Close dialog first
+                                  _handleAuthError(context);
+                                  return;
+                                } else if (e.toString().contains('Video size must be less than')) {
+                                  errorMessage = 'Video size must be less than 50MB. Please choose a smaller video.';
+                                } else if (e.toString().contains('Failed to process video')) {
+                                  errorMessage = 'Failed to process video. Please try again with a different video.';
+                                } else if (e.toString().contains('Insufficient balance')) {
+                                  errorMessage = 'Insufficient balance for withdrawal.';
+                                } else {
+                                  errorMessage = 'Error: ${e.toString()}';
+                                }
+                                
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(errorMessage, style: const TextStyle(color: Colors.white)),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isLoading = false);
+                                }
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFFD700),
+                              foregroundColor: const Color(0xFF0B1D3A),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Withdraw',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  Future<String?> _pickAndUploadVideo() async {
+    try {
+      // Show options dialog
+      String? source = await showDialog<String>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1E3A70),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+              side: const BorderSide(color: Color(0xFFFFD700), width: 1),
+            ),
+            title: const Text(
+              'Choose Video Source',
+              style: TextStyle(
+                color: Color(0xFFFFD700),
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.videocam, color: Color(0xFFFFD700)),
+                  title: const Text(
+                    'Record Video',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () => Navigator.pop(context, 'camera'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library, color: Color(0xFFFFD700)),
+                  title: const Text(
+                    'Choose from Gallery',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () => Navigator.pop(context, 'gallery'),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+
+      if (source == null) return null;
+
+      String? videoPath;
+      if (source == 'camera') {
+        // Record video using camera
+        final ImagePicker picker = ImagePicker();
+        final XFile? video = await picker.pickVideo(
+          source: ImageSource.camera,
+          maxDuration: const Duration(seconds: 60), // 1 minute limit
+        );
+        if (video == null) return null;
+        videoPath = video.path;
+      } else {
+        // Pick video from gallery
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
+          type: FileType.video,
+          allowMultiple: false,
+        );
+        if (result == null) return null;
+        videoPath = result.files.single.path;
+      }
+
+      if (videoPath == null) return null;
+      return videoPath;
+    } catch (e) {
+      throw Exception('Error selecting video: $e');
+    }
+  }
+
+  double _getAmountFontSize(double amount) {
+    final amountString = amount.toString();
+    if (amountString.length > 10) {
+      return 32; // Very large amounts
+    } else if (amountString.length > 8) {
+      return 36; // Large amounts
+    } else if (amountString.length > 6) {
+      return 40; // Medium amounts
+    } else if (amountString.length > 4) {
+      return 44; // Small amounts
+    } else {
+      return 52; // Very small amounts
+    }
   }
 
   @override
@@ -776,9 +1233,9 @@ class _WalletScreenState extends State<WalletScreen> {
                                 const SizedBox(height: 10),
                                 Text(
                                   _currencyFormat.format(_balance),
-                                  style: const TextStyle(
-                                    color: Color(0xFFFFD700), // Gold color
-                                    fontSize: 52,
+                                  style: TextStyle(
+                                    color: const Color(0xFFFFD700), // Gold color
+                                    fontSize: _getAmountFontSize(_balance),
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 1.2,
                                   ),

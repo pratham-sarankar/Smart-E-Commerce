@@ -5,7 +5,7 @@ import 'package:smart_eommerce/models/user_model.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 class AuthService {
-  final String baseUrl = 'https://lakhpati.api.smartchainstudio.in/api';
+  final String baseUrl = 'https://4sr8mplp-3035.inc1.devtunnels.ms/api';
 
   // User login with FCM token
   Future<Map<String, dynamic>> login(String email, String password) async {
@@ -18,14 +18,14 @@ class AuthService {
       print('API URL: $baseUrl/user/login');
       
       final response = await http.post(
-        Uri.parse('$baseUrl/user/login'),
+        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/user/login'),
         headers: {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
           'email': email,
           'password': password,
-          'firebaseToken': fcmToken, // Add FCM token to login request
+          'firebaseToken': fcmToken, 
         }),
       );
 

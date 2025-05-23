@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:video_compress/video_compress.dart';
+import 'dart:io';
 
 class WalletService {
-  static const String baseUrl = 'https://lakhpati.api.smartchainstudio.in/api/wallet';
+  static const String baseUrl = 'https://4sr8mplp-3035.inc1.devtunnels.ms/api/wallet';
+  static const int maxVideoSizeMB = 50;
 
   Future<String> _getAuthToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -136,7 +139,7 @@ class WalletService {
       };
 
       final response = await http.post(
-        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/wallet/verify-wallet-topup'),
+        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/wallet/verify-wallet-topup'),
         headers: headers,
         body: jsonEncode(requestBody),
       );
@@ -165,35 +168,120 @@ class WalletService {
     }
   }
 
-  Future<Map<String, dynamic>> requestWithdrawal(double amount) async {
+  Future<String?> _validateAndConvertVideo(String videoPath) async {
+    try {
+      final file = File(videoPath);
+      final fileSize = await file.length();
+      final maxSize = maxVideoSizeMB * 1024 * 1024; // Convert MB to bytes
+
+      if (fileSize > maxSize) {
+        throw Exception('Video size must be less than $maxVideoSizeMB MB');
+      }
+
+      // Compress video if needed
+      final MediaInfo? mediaInfo = await VideoCompress.compressVideo(
+        videoPath,
+        quality: VideoQuality.MediumQuality,
+        deleteOrigin: false,
+      );
+
+      if (mediaInfo?.file == null) {
+        throw Exception('Failed to process video');
+      }
+
+      return mediaInfo!.file!.path;
+    } catch (e) {
+      print('Video validation error: $e');
+      throw Exception('Failed to process video: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> requestWithdrawal(double amount, {String? videoPath}) async {
     try {
       final token = await _getAuthToken();
       
-      final headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      };
+      if (videoPath != null) {
+        // For winning withdrawals - use multipart request
+        print('Processing winning withdrawal request with video...');
+        var request = http.MultipartRequest(
+          'POST',
+          Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/user/withdrawl-request'),
+        );
 
-      final response = await http.post(
-        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/user/withdrawl-request'),
-        headers: headers,
-        body: jsonEncode({'amount': amount}),
-      );
+        // Add authorization header
+        request.headers['Authorization'] = 'Bearer $token';
 
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else if (response.statusCode == 401) {
-        // Clear stored data on unauthorized access
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('token');
-        await prefs.remove('user_id');
-        await prefs.remove('user_email');
-        await prefs.setBool('is_logged_in', false);
-        throw Exception('Unauthorized: Please login again');
+        // Add amount in the request body
+        request.fields['amount'] = amount.toString();
+
+        try {
+          // Process and add video
+          final processedVideoPath = await _validateAndConvertVideo(videoPath);
+          if (processedVideoPath != null) {
+            print('Adding processed video to request: $processedVideoPath');
+            request.files.add(
+              await http.MultipartFile.fromPath(
+                'winnerVerificationVideo',
+                processedVideoPath,
+              ),
+            );
+          }
+        } catch (e) {
+          print('Video processing failed: $e');
+          throw Exception('Video processing failed: $e');
+        }
+
+        print('Sending winning withdrawal request...');
+        var streamedResponse = await request.send();
+        var response = await http.Response.fromStream(streamedResponse);
+
+        print('Received response with status code: ${response.statusCode}');
+        if (response.statusCode == 200) {
+          return jsonDecode(response.body);
+        } else if (response.statusCode == 401) {
+          // Clear stored data on unauthorized access
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('token');
+          await prefs.remove('user_id');
+          await prefs.remove('user_email');
+          await prefs.setBool('is_logged_in', false);
+          throw Exception('Unauthorized: Please login again');
+        } else {
+          print('Request failed with response: ${response.body}');
+          throw Exception('Request failed: ${response.body}');
+        }
       } else {
-        throw Exception('Request failed: ${response.body}');
+        // For regular withdrawals - use JSON request
+        print('Processing regular withdrawal request...');
+        final headers = {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        };
+
+        final response = await http.post(
+          Uri.parse('$baseUrl/withdrawl-request'),
+          headers: headers,
+          body: jsonEncode({'amount': amount}),
+        );
+
+        print('Received response with status code: ${response.statusCode}');
+        if (response.statusCode == 200) {
+          return jsonDecode(response.body);
+        } else if (response.statusCode == 401) {
+          // Clear stored data on unauthorized access
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('token');
+          await prefs.remove('user_id');
+          await prefs.remove('user_email');
+          await prefs.setBool('is_logged_in', false);
+          throw Exception('Unauthorized: Please login again');
+        } else {
+          print('Request failed with response: ${response.body}');
+          throw Exception('Request failed: ${response.body}');
+        }
       }
     } catch (e) {
+      print('Error in withdrawal request: $e');
       throw Exception('Error making withdrawal request: $e');
     }
   }
@@ -208,7 +296,7 @@ class WalletService {
       };
 
       final response = await http.get(
-        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/user/all-transactions'),
+        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/user/all-transactions'),
         headers: headers,
       );
 

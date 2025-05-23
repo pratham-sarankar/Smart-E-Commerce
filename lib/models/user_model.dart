@@ -7,6 +7,7 @@ class UserModel {
   final UserKyc? userKyc;
   final String token;
   final WalletModel? wallet;
+  final String? profileImage;
 
   UserModel({
     required this.id,
@@ -17,6 +18,7 @@ class UserModel {
     this.userKyc,
     required this.token,
     this.wallet,
+    this.profileImage,
   });
 
   // Create a user model from JSON data
@@ -32,6 +34,7 @@ class UserModel {
         userKyc: json['userKyc'] != null ? UserKyc.fromJson(json['userKyc']) : null,
         token: token,
         wallet: json['wallet'] != null ? WalletModel.fromJson(json['wallet']) : null,
+        profileImage: json['profileImage'],
       );
     } catch (e) {
       print('Error creating UserModel: $e');
@@ -62,6 +65,7 @@ class UserModel {
         userKyc: data['user']['userKyc'] != null ? UserKyc.fromJson(data['user']['userKyc']) : null,
         token: data['token'] ?? '',
         wallet: data['user']['wallet'] != null ? WalletModel.fromJson(data['user']['wallet']) : null,
+        profileImage: data['user']['profileImage'],
       );
     } catch (e) {
       print('Error creating UserModel from register response: $e');
@@ -90,6 +94,7 @@ class UserModel {
       'userKyc': userKyc?.toJson(),
       'token': token,
       'wallet': wallet?.toJson(),
+      'profileImage': profileImage,
     };
   }
   

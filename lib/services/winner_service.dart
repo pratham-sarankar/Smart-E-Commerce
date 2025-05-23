@@ -4,7 +4,7 @@ import '../models/winner_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class WinnerService {
-  static const String baseUrl = 'https://lakhpati.api.smartchainstudio.in/api';
+  static const String baseUrl = 'https://4sr8mplp-3035.inc1.devtunnels.ms/api';
 
   Future<WinnerResponse> getTodayWinner() async {
     try {

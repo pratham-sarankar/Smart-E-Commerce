@@ -3,6 +3,8 @@ import 'package:smart_eommerce/models/user_model.dart';
 import 'package:smart_eommerce/screens/main_screen.dart';
 import 'package:smart_eommerce/screens/scratch_card_screen.dart';
 import 'package:smart_eommerce/services/user_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -17,6 +19,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoggingOut = false;
   UserModel? _userProfile;
   String _errorMessage = '';
+  
+  // Add these variables for tracking changes
+  bool _hasChanges = false;
+  String? _newName;
+  String? _newDob;
+  File? _newProfileImage;
 
   @override
   void initState() {
@@ -115,11 +123,261 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const ScratchCardScreen(
-          amount: 5, // Default amount, can be modified
-          clubName: 'Gold Club', // Default club name, can be modified
-        ),
+        builder: (context) => const ScratchCardScreen(),
       ),
+    );
+  }
+
+  // Add this method to handle profile updates
+  Future<void> _updateProfile() async {
+    if (!_hasChanges) {
+      print('No changes detected, skipping update');
+      return;
+    }
+
+    print('Starting profile update...');
+    print('Changes detected:');
+    if (_newName != null) print('- New name: $_newName');
+    if (_newDob != null) print('- New DOB: $_newDob');
+    if (_newProfileImage != null) print('- New profile image: ${_newProfileImage!.path}');
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final formData = {
+        if (_newName != null) 'fullname': _newName,
+        if (_newDob != null) 'dob': _newDob,
+      };
+
+      print('Sending update request with form data: $formData');
+      final result = await _userService.updateProfile(
+        formData: formData,
+        profileImage: _newProfileImage,
+      );
+
+      print('Update API response: $result');
+
+      if (result['success']) {
+        print('Profile update successful');
+        // Clear the changes
+        setState(() {
+          _hasChanges = false;
+          _newName = null;
+          _newDob = null;
+          _newProfileImage = null;
+        });
+        
+        // Reload the user profile to get fresh data
+        print('Reloading user profile...');
+        await _loadUserProfile();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully', style: TextStyle(color: Colors.white),), ),
+        );
+      } else {
+        print('Profile update failed: ${result['message']}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['message'] ?? 'Failed to update profile')),
+        );
+      }
+    } catch (e) {
+      print('Error during profile update: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('An error occurred while updating profile')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _editName() {
+    print('Opening name edit dialog');
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        final TextEditingController nameController = TextEditingController(text: _userProfile?.fullname);
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E3A70),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+            side: BorderSide(
+              color: const Color(0xFFFFD700).withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          title: const Text(
+            'Edit Name',
+            style: TextStyle(color: Color(0xFFFFD700)),
+          ),
+          content: TextField(
+            controller: nameController,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Enter your name',
+              hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+              ),
+              focusedBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Color(0xFFFFD700)),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                print('Name edit cancelled');
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFD700),
+                foregroundColor: const Color(0xFF0B1D3A),
+              ),
+              onPressed: () {
+                final newName = nameController.text.trim();
+                print('New name entered: $newName');
+                if (newName.isNotEmpty && newName != _userProfile?.fullname) {
+                  print('Name changed from ${_userProfile?.fullname} to $newName');
+                  setState(() {
+                    _newName = newName;
+                    _hasChanges = true;
+                  });
+                } else {
+                  print('No name change detected');
+                }
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _editDOB() {
+    print('Opening DOB edit dialog');
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E3A70),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+            side: BorderSide(
+              color: const Color(0xFFFFD700).withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          title: const Text(
+            'Select Date of Birth',
+            style: TextStyle(color: Color(0xFFFFD700)),
+          ),
+          content: SizedBox(
+            height: 300,
+            child: CalendarDatePicker(
+              initialDate: DateTime.now(),
+              firstDate: DateTime(1900),
+              lastDate: DateTime.now(),
+              onDateChanged: (DateTime date) {
+                final newDob = date.toString().split(' ')[0];
+                print('New DOB selected: $newDob');
+                if (newDob != _userProfile?.dob) {
+                  print('DOB changed from ${_userProfile?.dob} to $newDob');
+                  setState(() {
+                    _newDob = newDob;
+                    _hasChanges = true;
+                  });
+                } else {
+                  print('No DOB change detected');
+                }
+                Navigator.pop(context);
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _updateProfileImage() async {
+    print('Opening profile image update dialog');
+    final ImagePicker picker = ImagePicker();
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E3A70),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+            side: BorderSide(
+              color: const Color(0xFFFFD700).withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          title: const Text(
+            'Update Profile Picture',
+            style: TextStyle(color: Color(0xFFFFD700)),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Color(0xFFFFD700)),
+                title: const Text('Take Photo', style: TextStyle(color: Colors.white)),
+                onTap: () async {
+                  print('Camera option selected');
+                  Navigator.pop(context);
+                  try {
+                    final XFile? image = await picker.pickImage(source: ImageSource.camera);
+                    if (image != null) {
+                      print('Image captured from camera: ${image.path}');
+                      setState(() {
+                        _newProfileImage = File(image.path);
+                        _hasChanges = true;
+                      });
+                    } else {
+                      print('No image selected from camera');
+                    }
+                  } catch (e) {
+                    print('Error capturing image: $e');
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Color(0xFFFFD700)),
+                title: const Text('Choose from Gallery', style: TextStyle(color: Colors.white)),
+                onTap: () async {
+                  print('Gallery option selected');
+                  Navigator.pop(context);
+                  try {
+                    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+                    if (image != null) {
+                      print('Image selected from gallery: ${image.path}');
+                      setState(() {
+                        _newProfileImage = File(image.path);
+                        _hasChanges = true;
+                      });
+                    } else {
+                      print('No image selected from gallery');
+                    }
+                  } catch (e) {
+                    print('Error selecting image from gallery: $e');
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -194,38 +452,82 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 2),
-                              image: const DecorationImage(
-                                image: AssetImage('assets/images/profile_pic.png'),
-                                fit: BoxFit.cover,
-                              ),
+                              image: _newProfileImage != null
+                                  ? DecorationImage(
+                                      image: FileImage(_newProfileImage!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : _userProfile?.profileImage != null
+                                      ? DecorationImage(
+                                          image: NetworkImage(_userProfile!.profileImage!),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : const DecorationImage(
+                                          image: AssetImage('assets/images/profile_pic.png'),
+                                          fit: BoxFit.cover,
+                                        ),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  'Profile',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                    letterSpacing: 0.3,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                                Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Profile',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                        letterSpacing: 0.3,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _userProfile?.email ?? 'Loading...',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white.withOpacity(0.85),
+                                        letterSpacing: 0.2,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _userProfile?.email ?? 'Loading...',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.white.withOpacity(0.85),
-                                    letterSpacing: 0.2,
+                                if (_hasChanges)
+                                  TextButton.icon(
+                                    onPressed: _isLoading ? null : _updateProfile,
+                                    style: TextButton.styleFrom(
+                                      backgroundColor: const Color(0xFFFFD700),
+                                      foregroundColor: const Color(0xFF0B1D3A),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    icon: _isLoading
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0B1D3A)),
+                                            ),
+                                          )
+                                        : const Icon(Icons.save, size: 16),
+                                    label: Text(
+                                      _isLoading ? 'Saving...' : 'Save',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
                               ],
                             ),
                           ),
@@ -257,16 +559,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               Stack(
                                 alignment: Alignment.bottomRight,
                                 children: [
-                                  Container(
-                                    width: 110,
-                                    height: 110,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFFD700),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: const Color(0xFFFFD700), width: 3),
-                                      image: const DecorationImage(
-                                        image: AssetImage('assets/images/profile_pic.png'),
-                                        fit: BoxFit.cover,
+                                  GestureDetector(
+                                    onTap: _updateProfileImage,
+                                    child: Container(
+                                      width: 110,
+                                      height: 110,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFFD700),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: const Color(0xFFFFD700), width: 3),
+                                        image: _newProfileImage != null
+                                            ? DecorationImage(
+                                                image: FileImage(_newProfileImage!),
+                                                fit: BoxFit.cover,
+                                              )
+                                            : _userProfile?.profileImage != null
+                                                ? DecorationImage(
+                                                    image: NetworkImage(_userProfile!.profileImage!),
+                                                    fit: BoxFit.cover,
+                                                  )
+                                                : const DecorationImage(
+                                                    image: AssetImage('assets/images/profile_pic.png'),
+                                                    fit: BoxFit.cover,
+                                                  ),
                                       ),
                                     ),
                                   ),
@@ -276,7 +591,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       color: const Color(0xFF1E3A70),
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(Icons.camera_alt, color: Color(0xFFFFD700), size: 20),
+                                    child: const Icon(Icons.edit, color: Color(0xFFFFD700), size: 20),
                                   ),
                                 ],
                               ),
@@ -306,6 +621,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         iconColor: const Color(0xFFFFD700),
                                         title: 'Name',
                                         value: _userProfile?.fullname ?? 'Not available',
+                                        isEditable: true,
+                                        onTap: _editName,
                                       ),
                                       
                                       // DOB section
@@ -314,6 +631,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         iconColor: const Color(0xFFFFD700),
                                         title: 'DOB',
                                         value: _userProfile?.dob ?? 'Not available',
+                                        isEditable: true,
+                                        onTap: _editDOB,
                                       ),
                                       
                                       // Email section
@@ -556,6 +875,7 @@ class ProfileInfoItem extends StatelessWidget {
   final String title;
   final String value;
   final VoidCallback? onTap;
+  final bool isEditable;
 
   const ProfileInfoItem({
     Key? key,
@@ -564,6 +884,7 @@ class ProfileInfoItem extends StatelessWidget {
     required this.title,
     required this.value,
     this.onTap,
+    this.isEditable = false,
   }) : super(key: key);
 
   @override
@@ -609,7 +930,16 @@ class ProfileInfoItem extends StatelessWidget {
                 ],
               ),
             ),
-            if (onTap != null)
+            if (isEditable)
+              IconButton(
+                icon: Icon(
+                  Icons.edit,
+                  color: const Color(0xFFFFD700),
+                  size: 20,
+                ),
+                onPressed: onTap,
+              ),
+            if (onTap != null && !isEditable)
               Icon(
                 Icons.chevron_right,
                 color: Colors.white.withOpacity(0.6),
