@@ -51,7 +51,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/user/add-testimonial'),
+        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/user/add-testimonial'),
       );
 
       // Add headers

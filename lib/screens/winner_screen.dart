@@ -22,10 +22,11 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
   late Animation<double> _animation;
   final WinnerService _winnerService = WinnerService();
   WinnerResponse? _winnerResponse;
-  List<WinnerData> _pastWinners = [];
+  List<PastWinnerData> _pastWinners = [];
   bool _isLoading = true;
   Razorpay? _razorpay;
   bool _isDonationLoading = false;
+  String _selectedPlan = 'silver'; // Default to silver
 
   @override
   void initState() {
@@ -36,9 +37,9 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
     )..repeat(reverse: true);
     
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
+    _initializeRazorpay();
     _fetchTodayWinner();
     _fetchPastWinners();
-    _initializeRazorpay();
   }
 
   void _initializeRazorpay() {
@@ -97,7 +98,8 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
 
   Future<void> _fetchTodayWinner() async {
     try {
-      final response = await _winnerService.getTodayWinner();
+      setState(() => _isLoading = true);
+      final response = await _winnerService.getTodayWinner(plan: _selectedPlan);
       if (mounted) {
         setState(() {
           _winnerResponse = response;
@@ -118,7 +120,7 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
 
   Future<void> _fetchPastWinners() async {
     try {
-      final response = await _winnerService.getPastWinners();
+      final response = await _winnerService.getPastWinners(plan: _selectedPlan);
       if (mounted) {
         setState(() {
           _pastWinners = response.pastWinners;
@@ -133,105 +135,39 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
     }
   }
 
-  Future<void> _handleInviteFromContacts() async {
-    try {
-      // Request contacts permission
-      final status = await Permission.contacts.request();
-      
-      if (status.isGranted) {
-        // Get all contacts
-        final contacts = await FlutterContacts.getContacts(
-          withProperties: true,
-          withPhoto: true,
-        );
-        
-        if (!mounted) return;
-
-        // Show contact picker dialog
-        final selectedContact = await showDialog<Contact>(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              backgroundColor: const Color(0xFF1E1E1E),
-              title: const Text(
-                'Select Contact',
-                style: TextStyle(color: Colors.white),
-              ),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: contacts.length,
-                  itemBuilder: (context, index) {
-                    final contact = contacts[index];
-                    return ListTile(
-                      leading: contact.photo != null
-                          ? CircleAvatar(backgroundImage: MemoryImage(contact.photo!))
-                          : CircleAvatar(
-                              backgroundColor: const Color(0xFF5030E8),
-                              child: Text(
-                                contact.displayName.isNotEmpty 
-                                    ? contact.displayName[0].toUpperCase()
-                                    : '?',
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ),
-                      title: Text(
-                        contact.displayName,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      onTap: () => Navigator.of(context).pop(contact),
-                    );
-                  },
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-
-        if (selectedContact != null) {
-          // Get the first phone number or email
-          String? contactInfo;
-          if (selectedContact.phones.isNotEmpty) {
-            contactInfo = selectedContact.phones.first.number;
-          } else if (selectedContact.emails.isNotEmpty) {
-            contactInfo = selectedContact.emails.first.address;
-          }
-
-          if (contactInfo != null) {
-            // Share the app with the selected contact
-            await Share.share(
-              'Join me on Lakhpati! Download the app and start winning big prizes!',
-              subject: 'Join Lakhpati App',
-            );
-          } else {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('No contact information found')),
-            );
-          }
+  Widget _buildPlanTab(String plan, String label) {
+    final isSelected = _selectedPlan == plan;
+    return GestureDetector(
+      onTap: () {
+        if (!isSelected) {
+          setState(() {
+            _selectedPlan = plan;
+            _isLoading = true;
+          });
+          _fetchTodayWinner();
+          _fetchPastWinners();
         }
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Contacts permission denied')),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
-    }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFFD700) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFFFFD700),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF0B1D3A) : const Color(0xFFFFD700),
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -244,13 +180,13 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0B1D3A), // Navy Blue background
+      backgroundColor: const Color(0xFF0B1D3A),
       body: SafeArea(
         child: Column(
           children: [
-            // App bar section as Stack with line behind transparent app bar
+            // App bar section
             Container(
-              height: 56, // Standard app bar height
+              height: 56,
               child: Stack(
                 children: [
                   Positioned.fill(
@@ -258,7 +194,7 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                       'assets/images/appbar_line.png',
                       fit: BoxFit.cover,
                       width: double.infinity,
-                      color: const Color(0xFFFFD700).withOpacity(0.2), // Gold tint
+                      color: const Color(0xFFFFD700).withOpacity(0.2),
                     ),
                   ),
                   
@@ -313,6 +249,19 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                 ],
               ),
             ),
+
+            // Plan selection tabs
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildPlanTab('gold', 'Gold'),
+                  _buildPlanTab('silver', 'Silver'),
+                  _buildPlanTab('diamond', 'Diamond'),
+                ],
+              ),
+            ),
             
             Expanded(
               child: _isLoading
@@ -322,157 +271,158 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
                       ),
                     )
                   : SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            height: 280,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF0B1D3A),
-                              image: DecorationImage(
-                                image: AssetImage('assets/images/winners.png'),
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                          
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                            child: const Text(
-                              'Today Winner',
-                              style: TextStyle(
-                                color: Color(0xFFFFD700),
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            color: _winnerResponse?.data != null 
-                              ? const Color(0xFF1E3A70) 
-                              : const Color(0xFF1E3A70).withOpacity(0.5),
-                            child: Text(
-                              _winnerResponse?.message ?? 'Loading...',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Color(0xFFFFD700),
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-                            child: Text(
-                              _winnerResponse?.data != null 
-                                ? 'Congratulations to our winner!'
-                                : 'Check back later to see who won today\'s draw!',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white54,
-                                fontSize: 16,
-                                height: 1.5,
-                              ),
-                            ),
-                          ),
-                          
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                            child: const Text(
-                              'Past Winners',
-                              style: TextStyle(
-                                color: Color(0xFFFFD700),
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          
-                          if (_pastWinners.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.all(20.0),
-                              child: Text(
-                                'No past winners yet',
-                                style: TextStyle(
-                                  color: Colors.white54,
-                                  fontSize: 16,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            )
-                          else
-                            ..._pastWinners.map((winner) => _buildPastWinnerItem(
-                              'assets/images/avatar.png',
-                              winner.name,
-                              winner.location,
-                              winner.amount,
-                            )).toList(),
-                          
-                          const SizedBox(height: 24),
-                          
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-                            child: Column(
-                              children: [
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton.icon(
-                                    onPressed: _handleInviteFromContacts,
-                                    icon: const Icon(Icons.people_alt_outlined),
-                                    label: const Text('Invite from Contacts'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFFFFD700),
-                                      foregroundColor: const Color(0xFF0B1D3A),
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 600),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: double.infinity,
+                                    height: 280,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF0B1D3A),
+                                      image: DecorationImage(
+                                        image: AssetImage('assets/images/winners.png'),
+                                        fit: BoxFit.contain,
                                       ),
-                                      elevation: 3,
-                                      splashFactory: InkRipple.splashFactory,
                                     ),
                                   ),
-                                ),
-                                
-                                const SizedBox(height: 16),
-                                
-                                // SizedBox(
-                                //   width: double.infinity,
-                                //   child: OutlinedButton.icon(
-                                //     onPressed: _isDonationLoading ? null : _handleDonation,
-                                //     icon: _isDonationLoading 
-                                //       ? const SizedBox(
-                                //           width: 20,
-                                //           height: 20,
-                                //           child: CircularProgressIndicator(
-                                //             strokeWidth: 2,
-                                //             valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
-                                //           ),
-                                //         )
-                                //       : const Icon(Icons.favorite_border),
-                                //     label: Text(_isDonationLoading ? 'Processing...' : 'Donate 1 rupee'),
-                                //     style: OutlinedButton.styleFrom(
-                                //       foregroundColor: const Color(0xFFFFD700),
-                                //       side: const BorderSide(color: Color(0xFFFFD700)),
-                                //       padding: const EdgeInsets.symmetric(vertical: 16),
-                                //       shape: RoundedRectangleBorder(
-                                //         borderRadius: BorderRadius.circular(12),
-                                //       ),
-                                //       splashFactory: InkRipple.splashFactory,
-                                //       elevation: 2,
-                                //       animationDuration: const Duration(milliseconds: 300),
-                                //     ),
-                                //   ),
-                                // ),
-                              ],
+                                  
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                                    child: const Text(
+                                      'Today Winner',
+                                      style: TextStyle(
+                                        color: Color(0xFFFFD700),
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  
+                                  if (_winnerResponse?.data != null) ...[
+                                    _buildWinnerCard(
+                                      _winnerResponse!.data!.firstWinner,
+                                      'First Winner',
+                                      const Color(0xFFFFD700),
+                                    ),
+                                    _buildWinnerCard(
+                                      _winnerResponse!.data!.secondWinner,
+                                      'Second Winner',
+                                      const Color(0xFFC0C0C0),
+                                    ),
+                                    _buildWinnerCard(
+                                      _winnerResponse!.data!.thirdWinner,
+                                      'Third Winner',
+                                      const Color(0xFFCD7F32),
+                                    ),
+                                  ] else
+                                    Container(
+                                      margin: const EdgeInsets.all(24),
+                                      padding: const EdgeInsets.all(24),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF1E3A70),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: const Text(
+                                        'No winners announced yet. Check back later!',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                                    child: Text(
+                                      _winnerResponse?.data != null 
+                                        ? 'Congratulations to our winner!'
+                                        : 'Check back later to see who won today\'s draw!',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white54,
+                                        fontSize: 16,
+                                        height: 1.5,
+                                      ),
+                                    ),
+                                  ),
+
+                                  // Countdown timer
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                                    child: CircularCountdownTimer(
+                                      targetTime: DateTime(
+                                        DateTime.now().year,
+                                        DateTime.now().month,
+                                        DateTime.now().day,
+                                        20,
+                                        0,
+                                        0,
+                                      ),
+                                    ),
+                                  ),
+                                  
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+                                    child: const Text(
+                                      'Past Winners',
+                                      style: TextStyle(
+                                        color: Color(0xFFFFD700),
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  
+                                  if (_pastWinners.isEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.all(24),
+                                      child: Text(
+                                        'No past winners yet',
+                                        style: TextStyle(
+                                          color: Colors.white54,
+                                          fontSize: 16,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    )
+                                  else
+                                    ..._pastWinners.map((winner) => _buildPastWinnerItem(winner)).toList(),
+                                  
+                                  const SizedBox(height: 24),
+                                  
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                                    child: Column(
+                                      children: [
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: ElevatedButton.icon(
+                                            onPressed: _handleInviteFromContacts,
+                                            icon: const Icon(Icons.people_alt_outlined),
+                                            label: const Text('Invite from Contacts'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(0xFFFFD700),
+                                              foregroundColor: const Color(0xFF0B1D3A),
+                                              padding: const EdgeInsets.symmetric(vertical: 16),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              elevation: 3,
+                                              splashFactory: InkRipple.splashFactory,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
             ),
           ],
         ),
@@ -480,9 +430,105 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildPastWinnerItem(String imagePath, String name, String location, String amount) {
+  Widget _buildWinnerCard(WinnerInfo winner, String position, Color color) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E3A70),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              position,
+              style: TextStyle(
+                color: color,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color.withOpacity(0.2),
+                ),
+                child: Center(
+                  child: Text(
+                    winner.user.fullname[0].toUpperCase(),
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      winner.user.fullname,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Ticket: ${winner.ticket}',
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '₹${winner.winningAmount}',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPastWinnerItem(PastWinnerData winner) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: const Color(0xFF1E3A70),
@@ -492,62 +538,172 @@ class _WinnerScreenState extends State<WinnerScreen> with SingleTickerProviderSt
           width: 1,
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFFFFD700).withOpacity(0.2),
-              image: DecorationImage(
-                image: AssetImage(imagePath),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  location,
-                  style: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 13,
-                  ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFD700).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  name,
+                child: Text(
+                  winner.plan.toUpperCase(),
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
+                    color: Color(0xFFFFD700),
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ],
-            ),
+              ),
+              Text(
+                DateFormat('MMM dd, yyyy').format(winner.date),
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF5030E8).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
+          const SizedBox(height: 16),
+          _buildWinnerRow(winner.firstWinner, 'First', const Color(0xFFFFD700)),
+          const SizedBox(height: 8),
+          _buildWinnerRow(winner.secondWinner, 'Second', const Color(0xFFC0C0C0)),
+          const SizedBox(height: 8),
+          _buildWinnerRow(winner.thirdWinner, 'Third', const Color(0xFFCD7F32)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWinnerRow(UserInfo user, String position, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color.withOpacity(0.2),
+          ),
+          child: Center(
             child: Text(
-              amount,
-              style: const TextStyle(
-                color: Colors.white,
+              user.fullname[0].toUpperCase(),
+              style: TextStyle(
+                color: color,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                position,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                user.fullname,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
+  }
+
+  Future<void> _handleInviteFromContacts() async {
+    try {
+      // Show loading indicator immediately
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
+            ),
+          );
+        },
+      );
+
+      // Request contacts permission
+      final status = await Permission.contacts.request();
+      
+      if (status.isGranted) {
+        // Get contacts with limited properties for faster loading
+        final contacts = await FlutterContacts.getContacts(
+          withProperties: true,
+          withPhoto: false, // Don't load photos initially for faster loading
+        );
+        
+        if (!mounted) return;
+        
+        // Close loading dialog
+        Navigator.of(context).pop();
+
+        // Show contact picker dialog with search
+        final selectedContact = await showDialog<Contact>(
+          context: context,
+          builder: (BuildContext context) {
+            return _ContactSearchDialog(contacts: contacts);
+          },
+        );
+
+        if (selectedContact != null) {
+          // Get the first phone number or email
+          String? contactInfo;
+          if (selectedContact.phones.isNotEmpty) {
+            contactInfo = selectedContact.phones.first.number;
+          } else if (selectedContact.emails.isNotEmpty) {
+            contactInfo = selectedContact.emails.first.address;
+          }
+
+          if (contactInfo != null) {
+            // Share the app with the selected contact
+            await Share.share(
+              'Join me on Lakhpati! Download the app and start winning big prizes!',
+              subject: 'Join Lakhpati App',
+            );
+          } else {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No contact information found')),
+            );
+          }
+        }
+      } else {
+        if (!mounted) return;
+        // Close loading dialog
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Contacts permission denied')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      // Close loading dialog if it's open
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
   }
 }
 
@@ -773,6 +929,129 @@ class _CircularCountdownTimerState extends State<CircularCountdownTimer> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// Add this new widget class for the contact search dialog
+class _ContactSearchDialog extends StatefulWidget {
+  final List<Contact> contacts;
+
+  const _ContactSearchDialog({
+    Key? key,
+    required this.contacts,
+  }) : super(key: key);
+
+  @override
+  State<_ContactSearchDialog> createState() => _ContactSearchDialogState();
+}
+
+class _ContactSearchDialogState extends State<_ContactSearchDialog> {
+  late List<Contact> filteredContacts;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    filteredContacts = List.from(widget.contacts);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterContacts(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        filteredContacts = List.from(widget.contacts);
+      } else {
+        filteredContacts = widget.contacts
+            .where((contact) =>
+                contact.displayName.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF1E1E1E),
+      title: Column(
+        children: [
+          const Text(
+            'Select Contact',
+            style: TextStyle(color: Colors.white),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _searchController,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Search contacts...',
+              hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+              prefixIcon: const Icon(Icons.search, color: Color(0xFFFFD700)),
+              filled: true,
+              fillColor: Colors.white.withOpacity(0.1),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            onChanged: _filterContacts,
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 400,
+        child: filteredContacts.isEmpty
+            ? Center(
+                child: Text(
+                  _searchController.text.isEmpty
+                      ? 'No contacts found'
+                      : 'No contacts match your search',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 16,
+                  ),
+                ),
+              )
+            : ListView.builder(
+                itemCount: filteredContacts.length,
+                itemBuilder: (context, index) {
+                  final contact = filteredContacts[index];
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: const Color(0xFF5030E8),
+                      child: Text(
+                        contact.displayName.isNotEmpty 
+                            ? contact.displayName[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    title: Text(
+                      contact.displayName,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    onTap: () => Navigator.of(context).pop(contact),
+                  );
+                },
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text(
+            'Cancel',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      ],
     );
   }
 } 

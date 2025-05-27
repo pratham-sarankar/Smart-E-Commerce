@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../services/wallet_service.dart';
 
@@ -205,6 +206,18 @@ class TransactionDetailCard extends StatelessWidget {
     required this.currencyFormat,
   }) : super(key: key);
 
+  void _copyTransactionId(BuildContext context) {
+    final transactionId = transaction['transaction_id']?.toString() ?? '';
+    Clipboard.setData(ClipboardData(text: transactionId));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Transaction ID copied to clipboard'),
+        duration: Duration(seconds: 2),
+        backgroundColor: Color(0xFFFFD700),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isCredit = transaction['type']?.toString().toLowerCase() == 'credit';
@@ -307,12 +320,24 @@ class TransactionDetailCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 
                 // Transaction ID
-                Text(
-                  'Transaction ID: ${transaction['transaction_id']}',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 14,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Transaction ID: ${transaction['transaction_id']}',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.copy, color: Color(0xFFFFD700), size: 20),
+                      onPressed: () => _copyTransactionId(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 
@@ -342,6 +367,18 @@ class TransactionDetailsDialog extends StatelessWidget {
     required this.transaction,
     required this.currencyFormat,
   }) : super(key: key);
+
+  void _copyTransactionId(BuildContext context) {
+    final transactionId = transaction['transaction_id']?.toString() ?? '';
+    Clipboard.setData(ClipboardData(text: transactionId));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Transaction ID copied to clipboard'),
+        duration: Duration(seconds: 2),
+        backgroundColor: Color(0xFFFFD700),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -416,10 +453,42 @@ class TransactionDetailsDialog extends StatelessWidget {
               ),
               
               // Transaction ID
-              _buildDetailRow(
-                'Transaction ID',
-                transaction['transaction_id']?.toString() ?? '',
-                Colors.white70,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 120,
+                    child: Text(
+                      'Transaction ID',
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            transaction['transaction_id']?.toString() ?? '',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.copy, color: Color(0xFFFFD700), size: 20),
+                          onPressed: () => _copyTransactionId(context),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               
               // Created At

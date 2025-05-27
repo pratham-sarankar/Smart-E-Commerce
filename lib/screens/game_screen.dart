@@ -76,7 +76,7 @@ class _GameScreenState extends State<GameScreen> {
 
       // Create order API call
       final response = await http.post(
-        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/draw/create-order'),
+        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/draw/create-order'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -86,14 +86,6 @@ class _GameScreenState extends State<GameScreen> {
           'luckyNumber': selectedNumber.toString(), // Send as string with key 'luckyNumber'
         }),
       );
-
-      // Log the request details for debugging
-      print('Request URL: https://4sr8mplp-3035.inc1.devtunnels.ms/api/draw/create-order');
-      print('Request Headers: ${{'Content-Type': 'application/json', 'Authorization': 'Bearer $token'}}');
-      print('Request Body: ${jsonEncode({'amount': amount.toString(), 'luckyNumber': selectedNumber.toString()})}');
-      print('Response Status Code: ${response.statusCode}');
-      print('Response Body: ${response.body}');
-
       final responseData = json.decode(response.body);
 
       if (responseData['success']) {
@@ -160,7 +152,7 @@ class _GameScreenState extends State<GameScreen> {
 
       // Verify payment API call
       final verifyResponse = await http.post(
-        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/draw/payment-verify'),
+        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/draw/payment-verify'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

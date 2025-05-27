@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_eommerce/models/user_model.dart';
 
 class UserService {
-  final String baseUrl = 'https://4sr8mplp-3035.inc1.devtunnels.ms/api';
+  final String baseUrl = 'https://lakhpati.api.smartchainstudio.in/api';
 
   // Get user profile from API
   Future<Map<String, dynamic>> getUserProfile() async {
@@ -25,7 +25,7 @@ class UserService {
       print('Using token: ${token.substring(0, 10)}...');
       
       final response = await http.get(
-        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/user/profile'),
+        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/user/profile'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -275,7 +275,7 @@ class UserService {
       // Create multipart request
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/user/update-profile'),
+        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/user/update-profile'),
       );
 
       // Add authorization header

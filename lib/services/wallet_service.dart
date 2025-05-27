@@ -5,7 +5,7 @@ import 'package:video_compress/video_compress.dart';
 import 'dart:io';
 
 class WalletService {
-  static const String baseUrl = 'https://4sr8mplp-3035.inc1.devtunnels.ms/api/wallet';
+  static const String baseUrl = 'https://lakhpati.api.smartchainstudio.in/api/wallet';
   static const int maxVideoSizeMB = 50;
 
   Future<String> _getAuthToken() async {
@@ -139,7 +139,7 @@ class WalletService {
       };
 
       final response = await http.post(
-        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/wallet/verify-wallet-topup'),
+        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/wallet/verify-wallet-topup'),
         headers: headers,
         body: jsonEncode(requestBody),
       );
@@ -205,7 +205,7 @@ class WalletService {
         print('Processing winning withdrawal request with video...');
         var request = http.MultipartRequest(
           'POST',
-          Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/user/withdrawl-request'),
+          Uri.parse('https://lakhpati.api.smartchainstudio.in/api/user/withdrawl-request'),
         );
 
         // Add authorization header
@@ -296,7 +296,7 @@ class WalletService {
       };
 
       final response = await http.get(
-        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/user/all-transactions'),
+        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/user/all-transactions'),
         headers: headers,
       );
 

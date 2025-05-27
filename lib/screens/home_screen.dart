@@ -123,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       
       // Fetch total winning amount
       final response = await http.get(
-        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/user/total-wining'),
+        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/user/total-wining'),
         headers: {
           'Authorization': 'Bearer ${await _getAuthToken()}',
           'Content-Type': 'application/json',
@@ -149,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Future<void> _fetchTodaysDraw() async {
     try {
       final response = await http.get(
-        Uri.parse('https://4sr8mplp-3035.inc1.devtunnels.ms/api/user/todays-draw'),
+        Uri.parse('https://lakhpati.api.smartchainstudio.in/api/user/todays-draw'),
         headers: {
           'Authorization': 'Bearer ${await _getAuthToken()}',
           'Content-Type': 'application/json',
@@ -370,45 +370,87 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF1E3A70).withOpacity(0.5),
                                   borderRadius: BorderRadius.circular(30),
+                                  border: Border.all(
+                                    color: const Color(0xFFFFD700).withOpacity(0.2),
+                                    width: 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
                                 clipBehavior: Clip.antiAlias,
                                 child: TabBar(
                                   dividerColor: Colors.transparent,
                                   controller: _tabController,
                                   indicator: BoxDecoration(
-                                    color: const Color(0xFFFFD700).withOpacity(0.2),
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        const Color(0xFFFFD700).withOpacity(0.3),
+                                        const Color(0xFFFFD700).withOpacity(0.1),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
                                     borderRadius: BorderRadius.circular(30),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFFFFD700).withOpacity(0.2),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
                                   indicatorColor: Colors.transparent,
                                   labelColor: Colors.white,
                                   unselectedLabelColor: Colors.white54,
                                   labelStyle: const TextStyle(
                                     fontWeight: FontWeight.w600,
-                                    fontSize: 14,
+                                    fontSize: 13,
+                                    letterSpacing: 0.5,
+                                  ),
+                                  unselectedLabelStyle: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 13,
+                                    letterSpacing: 0.5,
                                   ),
                                   overlayColor: MaterialStateProperty.all(Colors.transparent),
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                                   tabs: [
                                     Tab(
                                       child: Container(
                                         alignment: Alignment.center,
-                                        child: const Text(
-                                          'Available Balance',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            letterSpacing: 0.5,
-                                          ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: const [
+                                            Icon(Icons.account_balance_wallet, size: 16),
+                                            SizedBox(width: 6),
+                                            Text(
+                                              'Balance',
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
                                     Tab(
                                       child: Container(
                                         alignment: Alignment.center,
-                                        child: const Text(
-                                          'Total Winning Price',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            letterSpacing: 0.5,
-                                          ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: const [
+                                            Icon(Icons.emoji_events, size: 16),
+                                            SizedBox(width: 6),
+                                            Text(
+                                              'Winnings',
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -455,23 +497,40 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         
                         // Today's Draw Section
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            border: Border(
-                              left: BorderSide(
-                                color: const Color(0xFFFFD700),
-                                width: 4,
-                              ),
+                            color: const Color(0xFF1E3A70).withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFFFD700).withOpacity(0.3),
+                              width: 1,
                             ),
                           ),
-                          child: const Text(
-                            'Today\'s Draw Entries',
-                            style: TextStyle(
-                              color: Color(0xFFFFD700),
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFD700).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.emoji_events,
+                                  color: Color(0xFFFFD700),
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Today\'s Draw Entries',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -590,7 +649,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                     return Container(
                                       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                                       decoration: BoxDecoration(
-                                        color: isWinner ? Colors.green.withOpacity(0.1) : Colors.transparent,
+                                        color: isWinner ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Row(
@@ -676,21 +735,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               elevation: 5,
                               shadowColor: Colors.white.withOpacity(0.3),
                             ),
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: const [
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
                                 Icon(Icons.play_circle_fill, color: Color(0xFFFFD700), size: 24),
-                                                SizedBox(width: 8),
-                                                Text(
+                                SizedBox(width: 8),
+                                Text(
                                   'Play Now',
-                                                  style: TextStyle(
+                                  style: TextStyle(
                                     color: Colors.white,
-                                                    fontSize: 18,
-                                                    fontWeight: FontWeight.w600,
-                                                    letterSpacing: 0.5,
-                                                  ),
-                                                ),
-                                              ],
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),

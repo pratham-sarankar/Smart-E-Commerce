@@ -24,6 +24,7 @@ class _ScratchCardScreenState extends State<ScratchCardScreen> with TickerProvid
   late Animation<double> _fadeAnimation;
   late ConfettiController _confettiController;
   Map<int, bool> _revealedCards = {};
+  Map<int, Map<String, dynamic>> _cardResults = {};
   late AnimationController _scratchGuideController;
   late Animation<double> _scratchGuideAnimation;
   int? _activeCardIndex;
@@ -131,7 +132,7 @@ class _ScratchCardScreenState extends State<ScratchCardScreen> with TickerProvid
     }
   }
 
-  Future<void> _scratchCard(String scratchCardId) async {
+  Future<void> _scratchCard(String scratchCardId, int index) async {
     if (!_canScratch) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -139,6 +140,10 @@ class _ScratchCardScreenState extends State<ScratchCardScreen> with TickerProvid
           backgroundColor: Colors.red,
         ),
       );
+      return;
+    }
+
+    if (_cardResults.containsKey(index)) {
       return;
     }
 
@@ -154,7 +159,16 @@ class _ScratchCardScreenState extends State<ScratchCardScreen> with TickerProvid
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
+          _cardResults[index] = data;
           _scratchResult = data;
+          
+          // Check if the card is used and remove it from the list
+          if (data['scratchCard'] != null && data['scratchCard']['isUsed'] == true) {
+            _scratchCards.removeAt(index);
+            // Update the revealed cards map to maintain consistency
+            _revealedCards.remove(index);
+            _cardResults.remove(index);
+          }
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -198,39 +212,7 @@ class _ScratchCardScreenState extends State<ScratchCardScreen> with TickerProvid
     }
   }
 
-  String _generateReward(String plan) {
-    final rewards = [
-      'Maza Aa Gaya! 🎉',
-      'Lakhpati Banne Ke Karib! 💰',
-      'Aaj Ki Bumper Offer! 🎊',
-      'Khushi Ke Dhamake! 🎈',
-      'Luck Aa Raha Hai! 🍀',
-    ];
 
-    final bonusRewards = {
-      'silver': [
-        '10% Cashback',
-        'Extra Spin Chance',
-        'Surprise Bonus',
-      ],
-      'gold': [
-        '20% Cashback',
-        'Double Spin Chance',
-        'Premium Bonus',
-      ],
-      'diamond': [
-        '50% Cashback',
-        'Triple Spin Chance',
-        'Mega Bonus',
-      ],
-    };
-
-    final random = Random();
-    final baseReward = rewards[random.nextInt(rewards.length)];
-    final clubSpecificReward = bonusRewards[plan.toLowerCase()]?[random.nextInt(bonusRewards[plan.toLowerCase()]!.length)] ?? '';
-
-    return '$baseReward\n$clubSpecificReward';
-  }
 
   Widget _buildScratchGuide() {
     return AnimatedBuilder(
@@ -339,9 +321,10 @@ class _ScratchCardScreenState extends State<ScratchCardScreen> with TickerProvid
     );
   }
 
-  Widget _buildScratchCard(dynamic entry, String reward, int index) {
+  Widget _buildScratchCard(dynamic entry, int index) {
     _revealedCards[index] = _revealedCards[index] ?? false;
     final ticket = entry['participationTicket'];
+    final cardResult = _cardResults[index];
     
     return SizedBox(
       height: 260,
@@ -406,7 +389,7 @@ class _ScratchCardScreenState extends State<ScratchCardScreen> with TickerProvid
                   onChange: (value) {
                     if (value >= 25 && !_revealedCards[index]!) {
                       _playWinningAnimation(index);
-                      _scratchCard(ticket['scratchCard']);
+                      _scratchCard(ticket['scratchCard'], index);
                       Future.delayed(const Duration(milliseconds: 100), () {
                         if (mounted) {
                           setState(() {
@@ -447,7 +430,7 @@ class _ScratchCardScreenState extends State<ScratchCardScreen> with TickerProvid
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              if (_revealedCards[index]! && _scratchResult != null)
+                              if (_revealedCards[index]! && cardResult != null)
                                 FadeTransition(
                                   opacity: _fadeAnimation,
                                   child: ScaleTransition(
@@ -455,17 +438,17 @@ class _ScratchCardScreenState extends State<ScratchCardScreen> with TickerProvid
                                     child: Column(
                                       children: [
                                         Icon(
-                                          _scratchResult!['winningAmount'] > 0 
+                                          cardResult['winningAmount'] > 0 
                                               ? Icons.emoji_events
                                               : Icons.sentiment_dissatisfied,
-                                          color: _scratchResult!['winningAmount'] > 0 
+                                          color: cardResult['winningAmount'] > 0 
                                               ? const Color(0xFFFFD700)
                                               : Colors.grey,
                                           size: 50,
                                         ),
                                         const SizedBox(height: 16),
                                         Text(
-                                          _scratchResult!['message'] ?? '',
+                                          cardResult['message'] ?? '',
                                           textAlign: TextAlign.center,
                                           style: const TextStyle(
                                             color: Colors.black87,
@@ -475,7 +458,7 @@ class _ScratchCardScreenState extends State<ScratchCardScreen> with TickerProvid
                                         ),
                                         const SizedBox(height: 8),
                                         Text(
-                                          'Winning Amount: ₹${_scratchResult!['winningAmount']}',
+                                          'Winning Amount: ₹${cardResult['scratchCardAmount'] ?? cardResult['winningAmount']}',
                                           textAlign: TextAlign.center,
                                           style: const TextStyle(
                                             color: Colors.black87,
@@ -484,7 +467,7 @@ class _ScratchCardScreenState extends State<ScratchCardScreen> with TickerProvid
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          'Wallet Balance: ₹${_scratchResult!['walletBalance']}',
+                                          'Wallet Balance: ₹${cardResult['walletBalance']}',
                                           textAlign: TextAlign.center,
                                           style: const TextStyle(
                                             color: Colors.black87,
@@ -503,7 +486,7 @@ class _ScratchCardScreenState extends State<ScratchCardScreen> with TickerProvid
                   ),
                 ),
               ),
-            if (_revealedCards[index]! && _scratchResult != null && _scratchResult!['winningAmount'] > 0)
+            if (_revealedCards[index]! && cardResult != null && cardResult['winningAmount'] > 0)
               Positioned.fill(
                 child: ConfettiWidget(
                   confettiController: _confettiController,
@@ -584,8 +567,7 @@ class _ScratchCardScreenState extends State<ScratchCardScreen> with TickerProvid
                             itemCount: _scratchCards.length,
                             itemBuilder: (context, index) {
                               final entry = _scratchCards[index];
-                              final reward = _generateReward(entry['participationTicket']['plan']);
-                              return _buildScratchCard(entry, reward, index);
+                              return _buildScratchCard(entry, index);
                             },
                           ),
                         ),
